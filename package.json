@@ -1,0 +1,11 @@
+{
+  "name": "@pay.conductor-sdk-client-js/mono-repo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mitosis mono-repo template",
+  "workspaces": [
+    "library/packages/*",
+    "library",
+    "test-apps/*"
+  ]
+}
