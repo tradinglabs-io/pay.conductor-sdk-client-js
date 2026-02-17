@@ -1,5 +1,5 @@
 {
-  "name": "@pay.conductor-sdk-client-js/library-qwik",
+  "name": "@payconductor-sdk-client-js/library-qwik",
   "version": "0.0.1",
   "main": "./lib/index.qwik.mjs",
   "qwik": "./lib/index.qwik.mjs",

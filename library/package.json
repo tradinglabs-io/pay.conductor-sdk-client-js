@@ -1,5 +1,5 @@
 {
-  "name": "@pay.conductor-sdk-client-js/library",
+  "name": "@payconductor-sdk-client-js/library",
   "private": true,
   "scripts": {
     "start": "watch \"npm run build\" ./src",

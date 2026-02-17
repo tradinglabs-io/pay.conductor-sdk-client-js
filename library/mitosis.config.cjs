@@ -1,4 +1,3 @@
-
 /**
  * @type {import('@builder.io/mitosis').MitosisConfig}
  */
@@ -7,7 +6,13 @@ module.exports = {
   "targets": [
     "react",
     "svelte",
-    "qwik"
+    "qwik",
+    "rsc",
+    "vue",
+    "angular",
+    "webcomponent",
+    "customElement",
+    "solid"
   ],
   "dest": "packages",
   "commonOptions": {
@@ -18,6 +23,12 @@ module.exports = {
       "stylesType": "style-tag"
     },
     "svelte": {},
-    "qwik": {}
+    "qwik": {},
+    "rsc":{},
+    "vue": {},
+    "angular": {},
+    "webcomponent": {},
+    "customElement": {},
+    "solid": {}
   }
 }

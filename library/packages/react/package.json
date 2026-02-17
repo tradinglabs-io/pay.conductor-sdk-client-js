@@ -1,5 +1,5 @@
 {
-  "name": "@pay.conductor-sdk-client-js/library-react",
+  "name": "@payconductor-sdk-client-js/library-react",
   "type": "module",
   "files": [
     "package",

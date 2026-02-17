@@ -1,5 +1,5 @@
 {
-  "name": "@pay.conductor-sdk-client-js/library-svelte",
+  "name": "@payconductor-sdk-client-js/library-svelte",
   "version": "0.0.1",
   "scripts": {
     "dev": "vite dev",

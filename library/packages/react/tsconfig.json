@@ -1,3 +1,7 @@
-// Empty file to prevent test-apps/react Vite from searching upwards for a tsconfig
-// and finding `"jsxImportSource": "@builder.io/mitosis"` which causes a crash.
-{}
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  }
+}

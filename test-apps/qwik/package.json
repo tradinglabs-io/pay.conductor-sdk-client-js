@@ -1,5 +1,5 @@
 {
-  "name": "@pay.conductor-sdk-client-js/server-qwik",
+  "name": "@payconductor-sdk-client-js/server-qwik",
   "private": true,
   "trustedDependencies": [
     "sharp"
@@ -20,7 +20,7 @@
     "qwik": "qwik"
   },
   "devDependencies": {
-    "@pay.conductor-sdk-client-js/library-qwik": "*",
+    "@payconductor-sdk-client-js/library-qwik": "*",
     "@builder.io/qwik": "^1.2.18",
     "@builder.io/qwik-city": "^1.2.18",
     "@types/eslint": "^8.44.4",

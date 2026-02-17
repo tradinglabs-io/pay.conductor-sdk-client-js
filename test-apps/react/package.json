@@ -1,5 +1,5 @@
 {
-  "name": "@pay.conductor-sdk-client-js/server-react",
+  "name": "@payconductor-sdk-client-js/server-react",
   "private": true,
   "scripts": {
     "build": "tsc && vite build",
@@ -7,7 +7,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@pay.conductor-sdk-client-js/library-react": "*",
+    "@payconductor-sdk-client-js/library-react": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
