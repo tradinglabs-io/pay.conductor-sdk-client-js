@@ -6,24 +6,27 @@ export interface PayConductorEmbedProps extends PayConductorConfig {
   onPaymentComplete?: (result: PaymentResult) => void;
 }
 
-import { IFRAME_DEFAULT_HEIGHT } from "./constants";
-import { buildIframeUrl } from "./utils";
+import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
 import {
-  PayConductorConfig,
-  PaymentResult,
-  CreatePaymentMethodOptions,
-  PayConductorState,
-  PayConductorFrame,
-} from "./types";
-import {
-  createPendingRequestsMap,
-  createPaymentMethod,
   confirmPayment,
-  validatePayment,
-  resetPayment,
+  createPaymentMethod,
+  createPendingRequestsMap,
   handleMessageEvent,
   PendingRequest,
+  resetPayment,
+  sendConfig,
+  validatePayment,
 } from "./internal";
+import type {
+  ConfirmPaymentOptions,
+  CreatePaymentMethodOptions,
+  PayConductorApi,
+  PayConductorConfig,
+  PayConductorFrame,
+  PayConductorState,
+  PaymentResult,
+} from "./types";
+import { buildIframeUrl } from "./utils";
 
 /**
  * Usage:
@@ -50,16 +53,18 @@ class PayConductor extends HTMLElement {
       error: null,
       iframeUrl: "",
       pendingMap: null,
+      configSent: false,
     };
     if (!this.props) {
       this.props = {};
     }
 
     this.componentProps = [
-      "clientId",
-      "token",
+      "publicKey",
+      "intentToken",
       "theme",
       "locale",
+      "paymentMethods",
       "onReady",
       "onError",
       "onPaymentComplete",
@@ -98,12 +103,12 @@ class PayConductor extends HTMLElement {
     });
 
     this._root.innerHTML = `
-      <div id="payconductor" class="payconductor" data-el="div-pay-conductor-1">
+      <div class="payconductor" id="payconductor" data-el="div-pay-conductor-1">
         <slot></slot>
         <template data-el="show-pay-conductor">
           <iframe
-            title="PayConductor"
             allow="payment"
+            title="PayConductor"
             data-el="iframe-pay-conductor-1"
             data-ref="PayConductor-iframeRef"
           ></iframe>
@@ -140,10 +145,7 @@ class PayConductor extends HTMLElement {
   onMount() {
     // onMount
     this.state.iframeUrl = buildIframeUrl({
-      clientId: this.props.clientId,
-      token: this.props.token,
-      theme: this.props.theme,
-      locale: this.props.locale,
+      publicKey: this.props.publicKey,
     });
     this.update();
     this.state.isLoaded = true;
@@ -159,36 +161,53 @@ class PayConductor extends HTMLElement {
         return this.state.error;
       },
     };
-    const api = {
+    const config: PayConductorConfig = {
+      publicKey: this.props.publicKey,
+      intentToken: this.props.intentToken,
+      theme: this.props.theme,
+      locale: this.props.locale,
+      paymentMethods: this.props.paymentMethods,
+    };
+    const api: PayConductorApi = {
       createPaymentMethod: (options: CreatePaymentMethodOptions) =>
         createPaymentMethod(self._iframeRef, this.state.pendingMap, options),
-      confirmPayment: (paymentMethodId: string) =>
-        confirmPayment(self._iframeRef, this.state.pendingMap, paymentMethodId),
+      confirmPayment: (options: ConfirmPaymentOptions) =>
+        confirmPayment(self._iframeRef, this.state.pendingMap, options),
       validate: (data: any) =>
         validatePayment(self._iframeRef, this.state.pendingMap, data),
       reset: () => resetPayment(self._iframeRef, this.state.pendingMap),
     };
-    window.__payConductor = {
+    window.__PAY_CONDUCTOR__ = {
       frame,
-      config: {
-        clientId: this.props.clientId,
-        token: this.props.token,
-        theme: this.props.theme,
-        locale: this.props.locale,
-      },
+      config,
       api,
+    };
+    const sendConfigToIframe = async () => {
+      if (!this.state.configSent && self._iframeRef) {
+        this.state.configSent = true;
+        this.update();
+        sendConfig(self._iframeRef, this.state.pendingMap, {
+          intentToken: this.props.intentToken,
+          theme: this.props.theme,
+          locale: this.props.locale,
+          paymentMethods: this.props.paymentMethods,
+        });
+      }
     };
     const eventHandler = (event: MessageEvent) => {
       handleMessageEvent(
         event,
         this.state.pendingMap,
         (val) => {
-          var _temp;
-          return (_temp = this.state.isReady = val), this.update(), _temp;
+          this.state.isReady = val;
+          this.update();
+          if (val) {
+            sendConfigToIframe();
+          }
         },
         (val) => {
-          var _temp2;
-          return (_temp2 = this.state.error = val), this.update(), _temp2;
+          this.state.error = val;
+          this.update();
         },
         this.props.onReady,
         this.props.onError,

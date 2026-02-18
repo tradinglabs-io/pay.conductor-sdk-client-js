@@ -1,4 +1,4 @@
-import { IFRAME_DEFAULT_HEIGHT } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
 
 import {
   PendingRequest,
@@ -7,11 +7,14 @@ import {
   createPendingRequestsMap,
   handleMessageEvent,
   resetPayment,
+  sendConfig,
   validatePayment,
 } from "./internal";
 
 import {
+  ConfirmPaymentOptions,
   CreatePaymentMethodOptions,
+  PayConductorApi,
   PayConductorConfig,
   PayConductorFrame,
   PayConductorState,
@@ -40,6 +43,7 @@ export interface PayConductorEmbedProps extends PayConductorConfig {
 export const PayConductor = component$((props: PayConductorEmbedProps) => {
   const iframeRef = useSignal<Element>();
   const state = useStore<any>({
+    configSent: false,
     error: null,
     iframeUrl: "",
     isLoaded: false,
@@ -48,10 +52,7 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
   });
   useVisibleTask$(() => {
     state.iframeUrl = buildIframeUrl({
-      clientId: props.clientId,
-      token: props.token,
-      theme: props.theme,
-      locale: props.locale,
+      publicKey: props.publicKey,
     });
     state.isLoaded = true;
     state.pendingMap = createPendingRequestsMap();
@@ -64,31 +65,51 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
         return state.error;
       },
     };
-    const api = {
+    const config: PayConductorConfig = {
+      publicKey: props.publicKey,
+      intentToken: props.intentToken,
+      theme: props.theme,
+      locale: props.locale,
+      paymentMethods: props.paymentMethods,
+    };
+    const api: PayConductorApi = {
       createPaymentMethod: (options: CreatePaymentMethodOptions) =>
         createPaymentMethod(iframeRef.value, state.pendingMap, options),
-      confirmPayment: (paymentMethodId: string) =>
-        confirmPayment(iframeRef.value, state.pendingMap, paymentMethodId),
+      confirmPayment: (options: ConfirmPaymentOptions) =>
+        confirmPayment(iframeRef.value, state.pendingMap, options),
       validate: (data: any) =>
         validatePayment(iframeRef.value, state.pendingMap, data),
       reset: () => resetPayment(iframeRef.value, state.pendingMap),
     };
-    window.__payConductor = {
+    window.__PAY_CONDUCTOR__ = {
       frame,
-      config: {
-        clientId: props.clientId,
-        token: props.token,
-        theme: props.theme,
-        locale: props.locale,
-      },
+      config,
       api,
+    };
+    const sendConfigToIframe = async () => {
+      if (!state.configSent && iframeRef.value) {
+        state.configSent = true;
+        sendConfig(iframeRef.value, state.pendingMap, {
+          intentToken: props.intentToken,
+          theme: props.theme,
+          locale: props.locale,
+          paymentMethods: props.paymentMethods,
+        });
+      }
     };
     const eventHandler = (event: MessageEvent) => {
       handleMessageEvent(
         event,
         state.pendingMap,
-        (val) => (state.isReady = val),
-        (val) => (state.error = val),
+        (val) => {
+          state.isReady = val;
+          if (val) {
+            sendConfigToIframe();
+          }
+        },
+        (val) => {
+          state.error = val;
+        },
         props.onReady,
         props.onError,
         props.onPaymentComplete
@@ -99,8 +120,8 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
 
   return (
     <div
-      id="payconductor"
       class="payconductor"
+      id="payconductor"
       style={{
         width: "100%",
         position: "relative",
@@ -109,8 +130,8 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       <Slot></Slot>
       {state.isLoaded ? (
         <iframe
-          title="PayConductor"
           allow="payment"
+          title="PayConductor"
           ref={iframeRef}
           src={state.iframeUrl}
           style={{

@@ -1,8 +1,11 @@
 "use strict";
 Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: "Module" } });
 const qwik = require("@builder.io/qwik");
-const IFRAME_BASE_URL = "https://iframe.payconductor.ai";
-const ALLOWED_ORIGINS = [
+const isDev = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.port === "5175");
+const IFRAME_BASE_URL = isDev ? "http://localhost:5175" : "https://iframe.payconductor.ai";
+const ALLOWED_ORIGINS = isDev ? [
+  "http://localhost:5175"
+] : [
   "https://iframe.payconductor.ai"
 ];
 const DEFAULT_LOCALE = "pt-BR";
@@ -10,7 +13,14 @@ const IFRAME_DEFAULT_HEIGHT = "600px";
 const REQUEST_TIMEOUT = 3e4;
 const MESSAGE_TYPES = {
   INIT: "INIT",
+  CONFIG: "CONFIG",
+  UPDATE: "UPDATE",
+  SUBMIT: "SUBMIT",
   CREATE_PAYMENT_METHOD: "CREATE_PAYMENT_METHOD",
+  CREATE_PIX_PAYMENT: "CREATE_PIX_PAYMENT",
+  CREATE_NUPAY_PAYMENT: "CREATE_NUPAY_PAYMENT",
+  CREATE_GOOGLE_PAYMENT: "CREATE_GOOGLE_PAYMENT",
+  CREATE_APPLE_PAYMENT: "CREATE_APPLE_PAYMENT",
   CONFIRM_PAYMENT: "CONFIRM_PAYMENT",
   VALIDATE: "VALIDATE",
   RESET: "RESET",
@@ -31,12 +41,8 @@ const ERROR_CODES = {
 };
 function buildIframeUrl(config) {
   const params = new URLSearchParams({
-    clientId: config.clientId,
-    token: config.token,
-    locale: config.locale || DEFAULT_LOCALE
+    publicKey: config.publicKey
   });
-  if (config.theme)
-    params.set("theme", JSON.stringify(config.theme));
   return `${IFRAME_BASE_URL}?${params.toString()}`;
 }
 function generateRequestId() {
@@ -44,24 +50,6 @@ function generateRequestId() {
 }
 function isValidOrigin(origin, allowedOrigins) {
   return allowedOrigins.includes(origin);
-}
-function mergeTheme(userTheme, defaultTheme) {
-  return {
-    ...defaultTheme,
-    ...userTheme,
-    fontSize: {
-      ...defaultTheme.fontSize,
-      ...userTheme.fontSize
-    },
-    fontWeight: {
-      ...defaultTheme.fontWeight,
-      ...userTheme.fontWeight
-    },
-    spacing: {
-      ...defaultTheme.spacing,
-      ...userTheme.spacing
-    }
-  };
 }
 function createPendingRequestsMap() {
   return /* @__PURE__ */ new Map();
@@ -101,9 +89,10 @@ function sendMessageToIframe(iframe, pendingMap, type, data) {
 function createPaymentMethod(iframe, pendingMap, options) {
   return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.CREATE_PAYMENT_METHOD, options);
 }
-function confirmPayment(iframe, pendingMap, paymentMethodId) {
+function confirmPayment(iframe, pendingMap, options) {
   return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.CONFIRM_PAYMENT, {
-    paymentMethodId
+    intentToken: options.intentToken,
+    returnUrl: options.returnUrl
   });
 }
 function validatePayment(iframe, pendingMap, data) {
@@ -111,6 +100,12 @@ function validatePayment(iframe, pendingMap, data) {
 }
 function resetPayment(iframe, pendingMap) {
   return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.RESET);
+}
+function submitPayment(iframe, pendingMap) {
+  return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.SUBMIT);
+}
+function sendConfig(iframe, pendingMap, config) {
+  return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.CONFIG, config);
 }
 function handleMessageEvent(event, pendingMap, setIsReady, setError, onReady, onError, onPaymentComplete) {
   if (!isValidOrigin(event.origin, ALLOWED_ORIGINS))
@@ -143,6 +138,7 @@ function handleMessageEvent(event, pendingMap, setIsReady, setError, onReady, on
 const PayConductor = /* @__PURE__ */ qwik.componentQrl(/* @__PURE__ */ qwik.inlinedQrl((props) => {
   const iframeRef = qwik.useSignal();
   const state = qwik.useStore({
+    configSent: false,
     error: null,
     iframeUrl: "",
     isLoaded: false,
@@ -152,10 +148,7 @@ const PayConductor = /* @__PURE__ */ qwik.componentQrl(/* @__PURE__ */ qwik.inli
   qwik.useVisibleTaskQrl(/* @__PURE__ */ qwik.inlinedQrl(() => {
     const [iframeRef2, props2, state2] = qwik.useLexicalScope();
     state2.iframeUrl = buildIframeUrl({
-      clientId: props2.clientId,
-      token: props2.token,
-      theme: props2.theme,
-      locale: props2.locale
+      publicKey: props2.publicKey
     });
     state2.isLoaded = true;
     state2.pendingMap = createPendingRequestsMap();
@@ -168,24 +161,43 @@ const PayConductor = /* @__PURE__ */ qwik.componentQrl(/* @__PURE__ */ qwik.inli
         return state2.error;
       }
     };
+    const config = {
+      publicKey: props2.publicKey,
+      intentToken: props2.intentToken,
+      theme: props2.theme,
+      locale: props2.locale,
+      paymentMethods: props2.paymentMethods
+    };
     const api = {
       createPaymentMethod: (options) => createPaymentMethod(iframeRef2.value, state2.pendingMap, options),
-      confirmPayment: (paymentMethodId) => confirmPayment(iframeRef2.value, state2.pendingMap, paymentMethodId),
+      confirmPayment: (options) => confirmPayment(iframeRef2.value, state2.pendingMap, options),
       validate: (data) => validatePayment(iframeRef2.value, state2.pendingMap, data),
       reset: () => resetPayment(iframeRef2.value, state2.pendingMap)
     };
-    window.__payConductor = {
+    window.__PAY_CONDUCTOR__ = {
       frame,
-      config: {
-        clientId: props2.clientId,
-        token: props2.token,
-        theme: props2.theme,
-        locale: props2.locale
-      },
+      config,
       api
     };
+    const sendConfigToIframe = async () => {
+      if (!state2.configSent && iframeRef2.value) {
+        state2.configSent = true;
+        sendConfig(iframeRef2.value, state2.pendingMap, {
+          intentToken: props2.intentToken,
+          theme: props2.theme,
+          locale: props2.locale,
+          paymentMethods: props2.paymentMethods
+        });
+      }
+    };
     const eventHandler = (event) => {
-      handleMessageEvent(event, state2.pendingMap, (val) => state2.isReady = val, (val) => state2.error = val, props2.onReady, props2.onError, props2.onPaymentComplete);
+      handleMessageEvent(event, state2.pendingMap, (val) => {
+        state2.isReady = val;
+        if (val)
+          sendConfigToIframe();
+      }, (val) => {
+        state2.error = val;
+      }, props2.onReady, props2.onError, props2.onPaymentComplete);
     };
     window.addEventListener("message", eventHandler);
   }, "PayConductor_component_useVisibleTask_HdmlbVXcugE", [
@@ -218,21 +230,44 @@ const PayConductor = /* @__PURE__ */ qwik.componentQrl(/* @__PURE__ */ qwik.inli
     }, null, 3, "yV_1") : null
   ], 1, "yV_2");
 }, "PayConductor_component_Z7pfAdPFFAM"));
-function usePayconductor() {
-  if (typeof window !== "undefined")
-    return window.__payConductor || null;
-  return null;
-}
-function useFrame() {
-  const ctx = typeof window !== "undefined" ? window.__payConductor : null;
-  return ctx?.frame || {
+function usePayConductor() {
+  const ctx = typeof window !== "undefined" ? window.__PAY_CONDUCTOR__ : null;
+  const config = ctx?.config ? {
+    publicKey: ctx.config.publicKey,
+    intentToken: ctx.config.intentToken,
+    theme: ctx.config.theme,
+    locale: ctx.config.locale
+  } : {};
+  const frame = ctx?.frame ? {
+    iframe: ctx.frame.iframe,
+    isReady: ctx.frame.isReady,
+    error: ctx.frame.error
+  } : {
     iframe: null,
     isReady: false,
     error: null
   };
+  return {
+    ...config,
+    ...frame
+  };
 }
-function usePayment() {
-  const ctx = typeof window !== "undefined" ? window.__payConductor : null;
+function useElement() {
+  const ctx = typeof window !== "undefined" ? window.__PAY_CONDUCTOR__ : null;
+  const getIframe = () => {
+    if (!ctx?.frame?.iframe)
+      return null;
+    const iframeRef = ctx.frame.iframe;
+    return iframeRef?.value || null;
+  };
+  const sendToIframe = (type, data) => {
+    const iframe = getIframe();
+    if (iframe?.contentWindow)
+      iframe.contentWindow.postMessage({
+        type,
+        data
+      }, "*");
+  };
   if (!ctx)
     return {
       createPaymentMethod: async () => {
@@ -246,13 +281,72 @@ function usePayment() {
       },
       reset: async () => {
         throw new Error("PayConductor not initialized");
+      },
+      updateConfig: () => {
+        throw new Error("PayConductor not initialized");
+      },
+      updateIntentToken: () => {
+        throw new Error("PayConductor not initialized");
+      },
+      update: () => {
+        throw new Error("PayConductor not initialized");
+      },
+      submit: async () => {
+        throw new Error("PayConductor not initialized");
       }
     };
   return {
     createPaymentMethod: ctx.api.createPaymentMethod,
-    confirmPayment: ctx.api.confirmPayment,
+    confirmPayment: async (options) => {
+      const iframe = getIframe();
+      const pendingMap = createPendingRequestsMap();
+      if (!options.intentToken)
+        throw new Error("Intent token is required");
+      return sendMessageToIframe(iframe || void 0, pendingMap, MESSAGE_TYPES.CONFIRM_PAYMENT, {
+        intentToken: options.intentToken,
+        returnUrl: options.returnUrl
+      });
+    },
     validate: ctx.api.validate,
-    reset: ctx.api.reset
+    reset: ctx.api.reset,
+    updateConfig: (config) => {
+      const currentConfig = ctx.config;
+      sendToIframe(MESSAGE_TYPES.CONFIG, {
+        publicKey: currentConfig?.publicKey,
+        intentToken: currentConfig?.intentToken,
+        theme: config.theme ?? currentConfig?.theme,
+        locale: config.locale ?? currentConfig?.locale,
+        paymentMethods: config.paymentMethods ?? currentConfig?.paymentMethods
+      });
+    },
+    updateIntentToken: (intentToken) => {
+      const currentConfig = ctx.config;
+      sendToIframe(MESSAGE_TYPES.CONFIG, {
+        publicKey: currentConfig?.publicKey,
+        intentToken,
+        theme: currentConfig?.theme,
+        locale: currentConfig?.locale,
+        paymentMethods: currentConfig?.paymentMethods
+      });
+    },
+    update: (options) => {
+      sendToIframe(MESSAGE_TYPES.UPDATE, options);
+    },
+    submit: async () => {
+      const iframe = getIframe();
+      const pendingMap = createPendingRequestsMap();
+      try {
+        return await submitPayment(iframe || void 0, pendingMap);
+      } catch (error) {
+        return {
+          error: {
+            message: error.message || "Payment failed",
+            code: "payment_error",
+            type: "payment_error"
+          }
+        };
+      }
+    }
   };
 }
 exports.ALLOWED_ORIGINS = ALLOWED_ORIGINS;
@@ -267,7 +361,5 @@ exports.buildIframeUrl = buildIframeUrl;
 exports.default = PayConductor;
 exports.generateRequestId = generateRequestId;
 exports.isValidOrigin = isValidOrigin;
-exports.mergeTheme = mergeTheme;
-exports.useFrame = useFrame;
-exports.usePayconductor = usePayconductor;
-exports.usePayment = usePayment;
+exports.useElement = useElement;
+exports.usePayConductor = usePayConductor;

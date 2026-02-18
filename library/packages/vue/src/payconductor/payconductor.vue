@@ -1,7 +1,7 @@
 <template>
   <div
-    id="payconductor"
     class="payconductor"
+    id="payconductor"
     :style="{
       width: '100%',
       position: 'relative',
@@ -10,8 +10,8 @@
     <slot />
     <template v-if="isLoaded">
       <iframe
-        title="PayConductor"
         allow="payment"
+        title="PayConductor"
         ref="iframeRef"
         :src="iframeUrl"
         :style="{
@@ -27,24 +27,27 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 
-import { IFRAME_DEFAULT_HEIGHT } from "./constants";
-import { buildIframeUrl } from "./utils";
+import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
 import {
-  PayConductorConfig,
-  PaymentResult,
-  CreatePaymentMethodOptions,
-  PayConductorState,
-  PayConductorFrame,
-} from "./types";
-import {
-  createPendingRequestsMap,
-  createPaymentMethod,
   confirmPayment,
-  validatePayment,
-  resetPayment,
+  createPaymentMethod,
+  createPendingRequestsMap,
   handleMessageEvent,
   PendingRequest,
+  resetPayment,
+  sendConfig,
+  validatePayment,
 } from "./internal";
+import type {
+  ConfirmPaymentOptions,
+  CreatePaymentMethodOptions,
+  PayConductorApi,
+  PayConductorConfig,
+  PayConductorFrame,
+  PayConductorState,
+  PaymentResult,
+} from "./types";
+import { buildIframeUrl } from "./utils";
 
 export interface PayConductorEmbedProps extends PayConductorConfig {
   height?: string;
@@ -58,10 +61,11 @@ export default defineComponent({
   name: "pay-conductor",
 
   props: [
-    "clientId",
-    "token",
+    "publicKey",
+    "intentToken",
     "theme",
     "locale",
+    "paymentMethods",
     "onReady",
     "onError",
     "onPaymentComplete",
@@ -75,16 +79,14 @@ export default defineComponent({
       error: null,
       iframeUrl: "",
       pendingMap: null,
+      configSent: false,
       IFRAME_DEFAULT_HEIGHT,
     };
   },
 
   mounted() {
     this.iframeUrl = buildIframeUrl({
-      clientId: this.clientId,
-      token: this.token,
-      theme: this.theme,
-      locale: this.locale,
+      publicKey: this.publicKey,
     });
     this.isLoaded = true;
     this.pendingMap = createPendingRequestsMap();
@@ -97,31 +99,51 @@ export default defineComponent({
         return this.error;
       },
     };
-    const api = {
+    const config: PayConductorConfig = {
+      publicKey: this.publicKey,
+      intentToken: this.intentToken,
+      theme: this.theme,
+      locale: this.locale,
+      paymentMethods: this.paymentMethods,
+    };
+    const api: PayConductorApi = {
       createPaymentMethod: (options: CreatePaymentMethodOptions) =>
         createPaymentMethod(this.$refs.iframeRef, this.pendingMap, options),
-      confirmPayment: (paymentMethodId: string) =>
-        confirmPayment(this.$refs.iframeRef, this.pendingMap, paymentMethodId),
+      confirmPayment: (options: ConfirmPaymentOptions) =>
+        confirmPayment(this.$refs.iframeRef, this.pendingMap, options),
       validate: (data: any) =>
         validatePayment(this.$refs.iframeRef, this.pendingMap, data),
       reset: () => resetPayment(this.$refs.iframeRef, this.pendingMap),
     };
-    window.__payConductor = {
+    window.__PAY_CONDUCTOR__ = {
       frame,
-      config: {
-        clientId: this.clientId,
-        token: this.token,
-        theme: this.theme,
-        locale: this.locale,
-      },
+      config,
       api,
+    };
+    const sendConfigToIframe = async () => {
+      if (!this.configSent && this.$refs.iframeRef) {
+        this.configSent = true;
+        sendConfig(this.$refs.iframeRef, this.pendingMap, {
+          intentToken: this.intentToken,
+          theme: this.theme,
+          locale: this.locale,
+          paymentMethods: this.paymentMethods,
+        });
+      }
     };
     const eventHandler = (event: MessageEvent) => {
       handleMessageEvent(
         event,
         this.pendingMap,
-        (val) => (this.isReady = val),
-        (val) => (this.error = val),
+        (val) => {
+          this.isReady = val;
+          if (val) {
+            sendConfigToIframe();
+          }
+        },
+        (val) => {
+          this.error = val;
+        },
         this.onReady,
         this.onError,
         this.onPaymentComplete

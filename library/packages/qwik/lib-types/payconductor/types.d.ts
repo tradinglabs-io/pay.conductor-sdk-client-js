@@ -1,4 +1,4 @@
-import { PendingRequest } from "./internal";
+import type { PendingRequest } from "./internal";
 export type PayConductorFrame = {
     iframe: HTMLIFrameElement | Element | unknown | null;
     isReady: boolean;
@@ -6,20 +6,25 @@ export type PayConductorFrame = {
 };
 export type PayConductorApi = {
     createPaymentMethod: (options: CreatePaymentMethodOptions) => Promise<PaymentMethod>;
-    confirmPayment: (paymentMethodId: string) => Promise<PaymentResult>;
+    confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
     validate: (data: any) => Promise<boolean>;
     reset: () => Promise<void>;
 };
+export interface ConfirmPaymentOptions {
+    intentToken: string;
+    returnUrl?: string;
+}
 export type PayConductorContextValue = {
-    frame: PayConductorFrame;
+    frame: PayConductorFrame | null;
     config: PayConductorConfig | null;
     api: PayConductorApi;
 };
 export type PayConductorConfig = {
-    clientId: string;
-    token: string;
+    publicKey: string;
+    intentToken?: string;
     theme?: PayConductorTheme;
     locale?: string;
+    paymentMethods?: PaymentMethodsConfig;
 };
 export type PayConductorTheme = {
     primaryColor?: string;
@@ -101,7 +106,7 @@ export type CardData = {
 };
 export type PaymentMethod = {
     id: string;
-    type: 'card';
+    type: "card";
     card: {
         brand: string;
         last4: string;
@@ -112,9 +117,22 @@ export type PaymentMethod = {
 };
 export type PaymentResult = {
     paymentIntentId: string;
-    status: 'succeeded' | 'pending' | 'failed';
+    status: "succeeded" | "pending" | "failed";
     amount: number;
     currency: string;
 };
-export type OutgoingMessageType = 'INIT' | 'CREATE_PAYMENT_METHOD' | 'CONFIRM_PAYMENT' | 'VALIDATE' | 'RESET';
-export type IncomingMessageType = 'READY' | 'ERROR' | 'PAYMENT_METHOD_CREATED' | 'PAYMENT_COMPLETE' | 'VALIDATION_ERROR';
+export type OutgoingMessageType = "INIT" | "CONFIG" | "UPDATE" | "SUBMIT" | "CREATE_PAYMENT_METHOD" | "CREATE_PIX_PAYMENT" | "CREATE_NUPAY_PAYMENT" | "CREATE_GOOGLE_PAYMENT" | "CREATE_APPLE_PAYMENT" | "CONFIRM_PAYMENT" | "VALIDATE" | "RESET";
+export type IncomingMessageType = "READY" | "ERROR" | "PAYMENT_METHOD_CREATED" | "PAYMENT_COMPLETE" | "VALIDATION_ERROR";
+export type PaymentMethodType = "card" | "pix" | "nupay" | "googlepay" | "applepay";
+export type PaymentMethodLayout = "grid" | "vertical" | "horizontal";
+export interface PaymentMethodOption {
+    type: PaymentMethodType;
+    label: string;
+    icon?: string;
+    enabled?: boolean;
+}
+export interface PaymentMethodsConfig {
+    layout?: PaymentMethodLayout;
+    showPayButton?: boolean;
+    methods?: PaymentMethodOption[];
+}

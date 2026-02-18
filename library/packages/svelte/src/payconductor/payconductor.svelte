@@ -11,29 +11,34 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { IFRAME_DEFAULT_HEIGHT } from "./constants";
-  import { buildIframeUrl } from "./utils";
+  import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
   import {
-    PayConductorConfig,
-    PaymentResult,
-    CreatePaymentMethodOptions,
-    PayConductorState,
-    PayConductorFrame,
-  } from "./types";
-  import {
-    createPendingRequestsMap,
-    createPaymentMethod,
     confirmPayment,
-    validatePayment,
-    resetPayment,
+    createPaymentMethod,
+    createPendingRequestsMap,
     handleMessageEvent,
     PendingRequest,
+    resetPayment,
+    sendConfig,
+    validatePayment,
   } from "./internal";
+  import type {
+    ConfirmPaymentOptions,
+    CreatePaymentMethodOptions,
+    PayConductorApi,
+    PayConductorConfig,
+    PayConductorFrame,
+    PayConductorState,
+    PaymentResult,
+  } from "./types";
+  import { buildIframeUrl } from "./utils";
 
-  export let clientId: PayConductorEmbedProps["clientId"];
-  export let token: PayConductorEmbedProps["token"];
+  export let publicKey: PayConductorEmbedProps["publicKey"];
+  export let intentToken: PayConductorEmbedProps["intentToken"] = undefined;
   export let theme: PayConductorEmbedProps["theme"] = undefined;
   export let locale: PayConductorEmbedProps["locale"] = undefined;
+  export let paymentMethods: PayConductorEmbedProps["paymentMethods"] =
+    undefined;
   export let onReady: PayConductorEmbedProps["onReady"] = undefined;
   export let onError: PayConductorEmbedProps["onError"] = undefined;
   export let onPaymentComplete: PayConductorEmbedProps["onPaymentComplete"] =
@@ -58,13 +63,11 @@
   let error = null;
   let iframeUrl = "";
   let pendingMap = null;
+  let configSent = false;
 
   onMount(() => {
     iframeUrl = buildIframeUrl({
-      clientId: clientId,
-      token: token,
-      theme: theme,
-      locale: locale,
+      publicKey: publicKey,
     });
     isLoaded = true;
     pendingMap = createPendingRequestsMap();
@@ -77,30 +80,50 @@
         return error;
       },
     };
-    const api = {
+    const config: PayConductorConfig = {
+      publicKey: publicKey,
+      intentToken: intentToken,
+      theme: theme,
+      locale: locale,
+      paymentMethods: paymentMethods,
+    };
+    const api: PayConductorApi = {
       createPaymentMethod: (options: CreatePaymentMethodOptions) =>
         createPaymentMethod(iframeRef, pendingMap, options),
-      confirmPayment: (paymentMethodId: string) =>
-        confirmPayment(iframeRef, pendingMap, paymentMethodId),
+      confirmPayment: (options: ConfirmPaymentOptions) =>
+        confirmPayment(iframeRef, pendingMap, options),
       validate: (data: any) => validatePayment(iframeRef, pendingMap, data),
       reset: () => resetPayment(iframeRef, pendingMap),
     };
-    window.__payConductor = {
+    window.__PAY_CONDUCTOR__ = {
       frame,
-      config: {
-        clientId: clientId,
-        token: token,
-        theme: theme,
-        locale: locale,
-      },
+      config,
       api,
+    };
+    const sendConfigToIframe = async () => {
+      if (!configSent && iframeRef) {
+        configSent = true;
+        sendConfig(iframeRef, pendingMap, {
+          intentToken: intentToken,
+          theme: theme,
+          locale: locale,
+          paymentMethods: paymentMethods,
+        });
+      }
     };
     const eventHandler = (event: MessageEvent) => {
       handleMessageEvent(
         event,
         pendingMap,
-        (val) => (isReady = val),
-        (val) => (error = val),
+        (val) => {
+          isReady = val;
+          if (val) {
+            sendConfigToIframe();
+          }
+        },
+        (val) => {
+          error = val;
+        },
         onReady,
         onError,
         onPaymentComplete
@@ -115,8 +138,8 @@
     width: "100%",
     position: "relative",
   })}
-  id="payconductor"
   class="payconductor"
+  id="payconductor"
 >
   <slot />
   {#if isLoaded}
@@ -126,8 +149,8 @@
         height: height || IFRAME_DEFAULT_HEIGHT,
         border: "none",
       })}
-      title="PayConductor"
       allow="payment"
+      title="PayConductor"
       bind:this={iframeRef}
       src={iframeUrl}
     />

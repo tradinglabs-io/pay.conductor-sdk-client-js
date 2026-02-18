@@ -11,48 +11,51 @@ export interface PayConductorEmbedProps extends PayConductorConfig {
   onPaymentComplete?: (result: PaymentResult) => void;
 }
 
-import { IFRAME_DEFAULT_HEIGHT } from "./constants";
-import { buildIframeUrl } from "./utils";
+import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
 import {
-  PayConductorConfig,
-  PaymentResult,
-  CreatePaymentMethodOptions,
-  PayConductorState,
-  PayConductorFrame,
-} from "./types";
-import {
-  createPendingRequestsMap,
-  createPaymentMethod,
   confirmPayment,
-  validatePayment,
-  resetPayment,
+  createPaymentMethod,
+  createPendingRequestsMap,
   handleMessageEvent,
   PendingRequest,
+  resetPayment,
+  sendConfig,
+  validatePayment,
 } from "./internal";
+import type {
+  ConfirmPaymentOptions,
+  CreatePaymentMethodOptions,
+  PayConductorApi,
+  PayConductorConfig,
+  PayConductorFrame,
+  PayConductorState,
+  PaymentResult,
+} from "./types";
+import { buildIframeUrl } from "./utils";
 
 @Component({
   selector: "pay-conductor",
   template: `
     <div
-      id="payconductor"
       class="payconductor"
-      [ngStyle]="{
-          width: '100%',
-          position: 'relative'
-        }"
+      id="payconductor"
+      [ngStyle]='{
+          width: "100%",
+          position: "relative"
+        }'
     >
       <ng-content></ng-content>
       <ng-container *ngIf="isLoaded"
         ><iframe
-          title="PayConductor"
           allow="payment"
+          title="PayConductor"
           #iframeRef
           [attr.src]="iframeUrl"
-          [ngStyle]="{
-          width: '100%',
+          [ngStyle]='{
+          width: "100%",
           height: height || IFRAME_DEFAULT_HEIGHT,
-          border: 'none'
-        }"
+          border: "none"
+        }'
         ></iframe
       ></ng-container>
     </div>
@@ -68,10 +71,11 @@ import {
 export default class PayConductor {
   IFRAME_DEFAULT_HEIGHT = IFRAME_DEFAULT_HEIGHT;
 
-  @Input() clientId!: PayConductorEmbedProps["clientId"];
-  @Input() token!: PayConductorEmbedProps["token"];
+  @Input() publicKey!: PayConductorEmbedProps["publicKey"];
+  @Input() intentToken!: PayConductorEmbedProps["intentToken"];
   @Input() theme!: PayConductorEmbedProps["theme"];
   @Input() locale!: PayConductorEmbedProps["locale"];
+  @Input() paymentMethods!: PayConductorEmbedProps["paymentMethods"];
   @Input() onReady!: PayConductorEmbedProps["onReady"];
   @Input() onError!: PayConductorEmbedProps["onError"];
   @Input() onPaymentComplete!: PayConductorEmbedProps["onPaymentComplete"];
@@ -84,14 +88,12 @@ export default class PayConductor {
   error: PayConductorState["error"] = null;
   iframeUrl: PayConductorState["iframeUrl"] = "";
   pendingMap: PayConductorState["pendingMap"] = null;
+  configSent = false;
 
   ngOnInit() {
     if (typeof window !== "undefined") {
       this.iframeUrl = buildIframeUrl({
-        clientId: this.clientId,
-        token: this.token,
-        theme: this.theme,
-        locale: this.locale,
+        publicKey: this.publicKey,
       });
       this.isLoaded = true;
       this.pendingMap = createPendingRequestsMap();
@@ -104,40 +106,60 @@ export default class PayConductor {
           return this.error;
         },
       };
-      const api = {
+      const config: PayConductorConfig = {
+        publicKey: this.publicKey,
+        intentToken: this.intentToken,
+        theme: this.theme,
+        locale: this.locale,
+        paymentMethods: this.paymentMethods,
+      };
+      const api: PayConductorApi = {
         createPaymentMethod: (options: CreatePaymentMethodOptions) =>
           createPaymentMethod(
             this.iframeRef?.nativeElement,
             this.pendingMap,
             options
           ),
-        confirmPayment: (paymentMethodId: string) =>
+        confirmPayment: (options: ConfirmPaymentOptions) =>
           confirmPayment(
             this.iframeRef?.nativeElement,
             this.pendingMap,
-            paymentMethodId
+            options
           ),
         validate: (data: any) =>
           validatePayment(this.iframeRef?.nativeElement, this.pendingMap, data),
         reset: () =>
           resetPayment(this.iframeRef?.nativeElement, this.pendingMap),
       };
-      window.__payConductor = {
+      window.__PAY_CONDUCTOR__ = {
         frame,
-        config: {
-          clientId: this.clientId,
-          token: this.token,
-          theme: this.theme,
-          locale: this.locale,
-        },
+        config,
         api,
+      };
+      const sendConfigToIframe = async () => {
+        if (!this.configSent && this.iframeRef?.nativeElement) {
+          this.configSent = true;
+          sendConfig(this.iframeRef?.nativeElement, this.pendingMap, {
+            intentToken: this.intentToken,
+            theme: this.theme,
+            locale: this.locale,
+            paymentMethods: this.paymentMethods,
+          });
+        }
       };
       const eventHandler = (event: MessageEvent) => {
         handleMessageEvent(
           event,
           this.pendingMap,
-          (val) => (this.isReady = val),
-          (val) => (this.error = val),
+          (val) => {
+            this.isReady = val;
+            if (val) {
+              sendConfigToIframe();
+            }
+          },
+          (val) => {
+            this.error = val;
+          },
           this.onReady,
           this.onError,
           this.onPaymentComplete

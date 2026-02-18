@@ -1,5 +1,5 @@
-import { IncomingMessageType, OutgoingMessageType } from "./types";
-export declare const IFRAME_BASE_URL = "https://iframe.payconductor.ai";
+import type { IncomingMessageType, OutgoingMessageType } from "./types";
+export declare const IFRAME_BASE_URL: string;
 export declare const ALLOWED_ORIGINS: string[];
 export declare const DEFAULT_LOCALE = "pt-BR";
 export declare const IFRAME_DEFAULT_HEIGHT = "600px";
