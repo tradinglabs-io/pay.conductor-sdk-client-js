@@ -2,7 +2,8 @@
 
 A unified payment SDK that provides seamless integration with PayConductor's payment iframe across multiple JavaScript frameworks.
 
-[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-client-js.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-client-js)
+![NPM Version RSC](https://img.shields.io/npm/v/%40payconductor-sdk-web%2Flibrary-rsc)
+![NPM Version React](https://img.shields.io/npm/v/%40payconductor-sdk-web%2Flibrary-react)
 
 ## Features
 
