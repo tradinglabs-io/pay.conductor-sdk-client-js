@@ -8,7 +8,7 @@ export interface PayConductorCheckoutElementProps {
 export default function PayConductorCheckoutElement(
 	props: PayConductorCheckoutElementProps,
 ) {
-	const iframeRef = useRef<any>(null);
+	const iframeRef = useRef<HTMLIFrameElement | Element | unknown | null>(null);
 
 	const state = useStore({
 		iframeUrl: "",
@@ -41,7 +41,7 @@ export default function PayConductorCheckoutElement(
 			{state.isLoaded && state.iframeUrl && (
 				<iframe
 					allow="payment"
-					ref={iframeRef}
+					ref={"contentWindow" in iframeRef ? iframeRef : undefined}
 					src={state.iframeUrl}
 					style={{
 						width: "100%",
