@@ -1,4 +1,4 @@
-import { PaymentMethod, PaymentResult } from "./iframe/types"
+import {PayConductorConfig, PaymentMethod, PaymentResult} from "./iframe/types";
 
 export type ConfirmPaymentOptions = {
 	intentToken: string;
@@ -15,7 +15,9 @@ export type SubmitResult = {
 };
 
 export type PayConductorApi = {
-	confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
+	confirmPayment: (
+		options: ConfirmPaymentOptions,
+	) => Promise<PaymentResult>;
 	validate: (data: unknown) => Promise<boolean>;
 	reset: () => Promise<void>;
 	getSelectedPaymentMethod: () => PaymentMethod | null;
@@ -29,7 +31,7 @@ export type PayConductorFrame = {
 
 export type PayConductorContextValue = {
 	frame: PayConductorFrame | null;
-	config: import("./iframe/types").PayConductorConfig | null;
+	config: PayConductorConfig | null;
 	api: PayConductorApi;
 	selectedPaymentMethod?: PaymentMethod | null;
 };

@@ -1,12 +1,10 @@
-import type { IncomingMessageType, OutgoingMessageType } from "./types";
 import {
-	API_BASE_URL_PROD,
-	DEFAULT_LOCALE as SHARED_DEFAULT_LOCALE,
 	IFRAME_BASE_URL_DEV,
 	IFRAME_BASE_URL_PROD,
-	IFRAME_DEFAULT_HEIGHT as SHARED_IFRAME_DEFAULT_HEIGHT,
+	IFRAME_DEFAULT_HEIGHT,
 	REQUEST_TIMEOUT_MS,
 } from "./iframe/constants";
+import { IncomingMessage, OutgoingMessage } from "./iframe/types";
 
 const isDev =
 	typeof window !== "undefined" &&
@@ -16,39 +14,33 @@ const isDev =
 
 export const IFRAME_BASE_URL = isDev ? IFRAME_BASE_URL_DEV : IFRAME_BASE_URL_PROD;
 
-export const ALLOWED_ORIGINS = isDev ? [IFRAME_BASE_URL_DEV] : [IFRAME_BASE_URL_PROD];
+export const ALLOWED_ORIGINS = [IFRAME_BASE_URL_DEV, IFRAME_BASE_URL_PROD];
 
-export const API_BASE_URL = API_BASE_URL_PROD;
-
-export const DEFAULT_LOCALE = SHARED_DEFAULT_LOCALE;
-export const IFRAME_DEFAULT_HEIGHT = SHARED_IFRAME_DEFAULT_HEIGHT;
+export const IFRAME_DEFAULT_HEIGHT_VALUE = IFRAME_DEFAULT_HEIGHT;
 export const REQUEST_TIMEOUT = REQUEST_TIMEOUT_MS;
 
-export const MESSAGE_TYPES: Record<
-	OutgoingMessageType | IncomingMessageType,
-	OutgoingMessageType | IncomingMessageType
-> = {
-	INIT: "INIT",
-	CONFIG: "CONFIG",
-	UPDATE: "UPDATE",
-	CONFIRM_PAYMENT: "CONFIRM_PAYMENT",
-	VALIDATE: "VALIDATE",
-	RESET: "RESET",
-	READY: "READY",
-	ERROR: "ERROR",
-	PAYMENT_COMPLETE: "PAYMENT_COMPLETE",
-	PAYMENT_FAILED: "PAYMENT_FAILED",
-	PAYMENT_PENDING: "PAYMENT_PENDING",
-	VALIDATION_ERROR: "VALIDATION_ERROR",
-	PAYMENT_METHOD_SELECTED: "PAYMENT_METHOD_SELECTED",
+export const MESSAGE_TYPES = {
+	INIT: OutgoingMessage.Init,
+	CONFIG: OutgoingMessage.Config,
+	UPDATE: OutgoingMessage.Update,
+	CONFIRM_PAYMENT: OutgoingMessage.ConfirmPayment,
+	VALIDATE: OutgoingMessage.Validate,
+	RESET: OutgoingMessage.Reset,
+	READY: IncomingMessage.Ready,
+	ERROR: IncomingMessage.Error,
+	PAYMENT_COMPLETE: IncomingMessage.PaymentComplete,
+	PAYMENT_FAILED: IncomingMessage.PaymentFailed,
+	PAYMENT_PENDING: IncomingMessage.PaymentPending,
+	VALIDATION_ERROR: IncomingMessage.ValidationError,
+	PAYMENT_METHOD_SELECTED: IncomingMessage.PaymentMethodSelected,
 } as const;
 
 export const ERROR_CODES = {
-	INVALID_CLIENT: "invalid_client",
-	INVALID_TOKEN: "invalid_token",
-	NETWORK_ERROR: "network_error",
-	IFRAME_NOT_READY: "iframe_not_ready",
-	PAYMENT_DECLINED: "payment_declined",
-	VALIDATION_ERROR: "validation_error",
-	TIMEOUT: "timeout",
+	INVALID_CLIENT: "InvalidClient",
+	INVALID_TOKEN: "InvalidToken",
+	NETWORK_ERROR: "NetworkError",
+	IFRAME_NOT_READY: "IframeNotReady",
+	PAYMENT_DECLINED: "PaymentDeclined",
+	VALIDATION_ERROR: "ValidationError",
+	TIMEOUT: "Timeout",
 } as const;

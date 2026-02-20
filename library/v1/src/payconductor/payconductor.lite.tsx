@@ -1,5 +1,6 @@
 import { onMount, useRef, useState, useStore } from "@builder.io/mitosis";
-import { IFRAME_DEFAULT_HEIGHT } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
+import type { PayConductorConfig, PaymentMethod, PaymentResult } from "./iframe/types";
 import {
 	confirmPayment,
 	createPendingRequestsMap,
@@ -15,7 +16,6 @@ import type {
 	PendingRequest,
 } from "./types";
 import { buildIframeUrl } from "./utils";
-import {PayConductorConfig, PaymentMethod, PaymentResult} from "./iframe/types";
 
 export interface PayConductorEmbedProps extends PayConductorConfig {
 	height?: string;
@@ -70,8 +70,8 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		};
 
 		const api: PayConductorApi = {
-			confirmPayment: (intentToken: string) =>
-				confirmPayment(iframeRef, state.pendingMap, { intentToken }),
+			confirmPayment: (options: { intentToken: string }) =>
+				confirmPayment(iframeRef, state.pendingMap, options),
 			validate: (data: unknown) =>
 				validatePayment(iframeRef, state.pendingMap, data),
 			reset: () => resetPayment(iframeRef, state.pendingMap),
@@ -94,7 +94,7 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 					locale: props.locale,
 					paymentMethods: props.paymentMethods,
 					defaultPaymentMethod: props.defaultPaymentMethod,
-					showActionButtons: props.showActionButtons,
+					showPaymentButtons: props.showPaymentButtons,
 				});
 			}
 		};
@@ -147,7 +147,7 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 					src={state.iframeUrl}
 					style={{
 						width: "100%",
-						height: props.height || IFRAME_DEFAULT_HEIGHT,
+						height: props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
 						border: "none",
 					}}
 					title="PayConductor"
