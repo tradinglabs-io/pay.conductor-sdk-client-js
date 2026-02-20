@@ -11,8 +11,8 @@ module.exports = {
     "vue",
     "angular",
     "webcomponent",
-    "customElement",
-    "solid"
+    "solid",
+    "preact"
   ],
   "dest": "packages",
   "commonOptions": {
