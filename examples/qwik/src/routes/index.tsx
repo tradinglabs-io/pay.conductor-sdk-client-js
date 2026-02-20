@@ -1,154 +1,130 @@
-import { $, component$, type QwikSubmitEvent, useSignal } from "@builder.io/qwik";
+import { $, component$, useSignal } from "@builder.io/qwik";
 import type { DocumentHead } from "@builder.io/qwik-city";
 import {
 	PayConductor,
-	useElement,
+	PayConductorCheckoutElement,
 	usePayConductor,
-} from "@payconductor-sdk-client-js/library-qwik";
+	usePayconductorElement,
+} from "@payconductor-sdk-web/library-qwik";
 
 export default component$(() => {
 	const { isReady, error } = usePayConductor();
-	const { submit, confirmPayment } = useElement();
+	const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
 	const errorMessage = useSignal<string | null>(null);
 	const isProcessing = useSignal(false);
+	const selectedMethod = useSignal<string | null>(null);
 
-	const handleSubmit = $((event: QwikSubmitEvent<HTMLFormElement>) => {
-		event.nativeEvent?.preventDefault();
-
-		if (!isReady) {
-			return;
-		}
+	const handleFinalize = $(async () => {
+		if (!isReady) return;
 
 		isProcessing.value = true;
 		errorMessage.value = null;
 
-		const doPayment = async () => {
-			try {
-				const { error: submitError } = await submit();
+		try {
+			// 1. Crie o pedido no seu backend (Draft) para obter o orderId
+			const response = await fetch("http://localhost:3000/api/v1/orders", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					payment: {
+						paymentMethod: "Draft",
+						availablePaymentMethods: ["CreditCard", "Pix", "BankSlip"],
+					},
+				}),
+			});
+			const { id: orderId } = await response.json();
 
-				if (submitError) {
-					errorMessage.value = submitError.message || "Validation failed";
-					isProcessing.value = false;
-					return;
-				}
+			// 2. Confirme o pagamento com o orderId
+			const result = await confirmPayment({ orderId });
+			console.log("Resultado do pagamento:", result);
 
-				const result = await confirmPayment({
-					intentToken: "pi_xxx_intent_token_xxx",
-					returnUrl: window.location.href,
-				});
-
-				console.log("Payment result:", result);
-
-				if (result.status === "succeeded") {
-					alert("Payment successful!");
-				}
-			} catch (err: any) {
-				errorMessage.value = err.message || "Payment failed";
-			} finally {
-				isProcessing.value = false;
+			if (result.status === "succeeded") {
+				alert("Pagamento realizado com sucesso!");
 			}
-		};
-
-		doPayment();
+		} catch (err: any) {
+			errorMessage.value = err.message || "Falha no pagamento";
+		} finally {
+			isProcessing.value = false;
+		}
 	});
 
 	const handleReady = $(() => {
-		console.log("PayConductor is ready");
+		console.log("PayConductor pronto");
 	});
 
 	const handleError = $((err: Error) => {
-		console.error("Error:", err);
+		console.error("Erro:", err);
 	});
 
 	const handlePaymentComplete = $((result: any) => {
-		console.log("Payment completed:", result);
+		console.log("Pagamento completo:", result);
+	});
+
+	const handlePaymentMethodSelected = $((method: any) => {
+		console.log("Método selecionado:", method);
+		selectedMethod.value = method;
 	});
 
 	return (
-		<>
+		<div style={{ maxWidth: "560px", margin: "0 auto", padding: "24px" }}>
 			<h1>PayConductor Checkout</h1>
 
 			<PayConductor
-				height="500px"
-				intentToken="pi_test_abc123"
+				debug={true}
 				locale="pt-BR"
 				onError={handleError}
 				onPaymentComplete={handlePaymentComplete}
+				onPaymentMethodSelected={handlePaymentMethodSelected}
 				onReady={handleReady}
 				publicKey="pk_test_123"
-				debug={true}
 				theme={{
 					primaryColor: "#0066ff",
 					fontFamily: "Roboto, sans-serif",
 					borderRadius: "8px",
 				}}
 			>
-				<form onSubmit$={handleSubmit}>
-					<div style={{ marginBottom: "16px" }}>
-						<label style={{ display: "block", marginBottom: "8px" }}>
-							Nome completo
-						</label>
-						<input
-							placeholder="João Silva"
-							style={{
-								width: "100%",
-								padding: "12px",
-								border: "1px solid #e6ebf1",
-								borderRadius: "4px",
-							}}
-							type="text"
-						/>
+				<PayConductorCheckoutElement height="500px" />
+
+				{selectedMethod.value && (
+					<p style={{ margin: "12px 0", color: "#64748b" }}>
+						Método selecionado: <strong>{selectedMethod.value}</strong>
+					</p>
+				)}
+
+				<button
+					disabled={!isReady || isProcessing.value}
+					onClick$={handleFinalize}
+					style={{
+						width: "100%",
+						padding: "16px",
+						backgroundColor: isReady ? "#0066ff" : "#cfd7df",
+						color: "#ffffff",
+						border: "none",
+						borderRadius: "8px",
+						cursor: isReady ? "pointer" : "not-allowed",
+						fontSize: "16px",
+						fontWeight: 600,
+						marginTop: "16px",
+					}}
+					type="button"
+				>
+					{isProcessing.value ? "Processando..." : "Finalizar compra"}
+				</button>
+
+				{errorMessage.value && (
+					<div style={{ color: "#fa755a", marginTop: "16px" }}>
+						{errorMessage.value}
 					</div>
+				)}
 
-					<div style={{ marginBottom: "16px" }}>
-						<label style={{ display: "block", marginBottom: "8px" }}>
-							Email
-						</label>
-						<input
-							placeholder="joao@exemplo.com"
-							style={{
-								width: "100%",
-								padding: "12px",
-								border: "1px solid #e6ebf1",
-								borderRadius: "4px",
-							}}
-							type="email"
-						/>
+				{error && (
+					<div style={{ color: "#fa755a", marginTop: "16px" }}>
+						Erro: {error}
 					</div>
-
-					<button
-						disabled={!isReady || isProcessing.value}
-						style={{
-							width: "100%",
-							padding: "16px",
-							backgroundColor: isReady ? "#0066ff" : "#cfd7df",
-							color: "#ffffff",
-							border: "none",
-							borderRadius: "8px",
-							cursor: isReady ? "pointer" : "not-allowed",
-							fontSize: "16px",
-							fontWeight: 600,
-						}}
-						type="submit"
-					>
-						{isProcessing.value ? "Processando..." : "Pagar agora"}
-					</button>
-
-					{errorMessage.value && (
-						<div style={{ color: "#fa755a", marginTop: "16px" }}>
-							{errorMessage.value}
-						</div>
-					)}
-
-					{error && (
-						<div style={{ color: "#fa755a", marginTop: "16px" }}>
-							Erro: {error}
-						</div>
-					)}
-				</form>
+				)}
 			</PayConductor>
-		</>
+		</div>
 	);
 });
 

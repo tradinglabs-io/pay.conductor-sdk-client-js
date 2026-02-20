@@ -69,7 +69,7 @@ function I(e, n, o, t) {
 }
 function v(e, n, o) {
   return I(e, n, f.CONFIRM_PAYMENT, {
-    intentToken: o.intentToken
+    orderId: o.orderId
   });
 }
 function J(e, n, o) {
@@ -175,7 +175,7 @@ function oe(e) {
       defaultPaymentMethod: e.defaultPaymentMethod
     }, k = {
       confirmPayment: (a) => (d("confirmPayment called", {
-        intentToken: a.intentToken
+        orderId: a.orderId
       }), v(A(), y, a)),
       validate: (a) => (d("validate called", a), J(A(), y, a)),
       reset: () => (d("reset called"), X(A(), y)),
@@ -295,7 +295,7 @@ function re(e) {
 function ae() {
   const e = typeof window < "u" ? window.PayConductor : null, n = e != null && e.config ? {
     publicKey: e.config.publicKey,
-    intentToken: e.config.intentToken,
+    orderId: e.config.orderId,
     theme: e.config.theme,
     locale: e.config.locale
   } : {}, o = e != null && e.frame ? {
@@ -341,8 +341,8 @@ function ie() {
     },
     confirmPayment: async (o) => {
       const t = _(e), i = N();
-      if (!o.intentToken)
-        throw new Error("Intent token is required");
+      if (!o.orderId)
+        throw new Error("Order ID is required");
       return v(t || void 0, i, o);
     },
     validate: e.api.validate,
@@ -352,17 +352,17 @@ function ie() {
       const t = e.config;
       n(f.CONFIG, {
         publicKey: t == null ? void 0 : t.publicKey,
-        intentToken: t == null ? void 0 : t.intentToken,
+        orderId: t == null ? void 0 : t.orderId,
         theme: o.theme ?? (t == null ? void 0 : t.theme),
         locale: o.locale ?? (t == null ? void 0 : t.locale),
         paymentMethods: o.paymentMethods ?? (t == null ? void 0 : t.paymentMethods)
       });
     },
-    updateIntentToken: (o) => {
+    updateorderId: (o) => {
       const t = e.config;
       n(f.CONFIG, {
         publicKey: t == null ? void 0 : t.publicKey,
-        intentToken: o,
+        orderId: o,
         theme: t == null ? void 0 : t.theme,
         locale: t == null ? void 0 : t.locale,
         paymentMethods: t == null ? void 0 : t.paymentMethods
@@ -404,7 +404,7 @@ function ie() {
     updateConfig: () => {
       throw new Error("PayConductor not initialized");
     },
-    updateIntentToken: () => {
+    updateorderId: () => {
       throw new Error("PayConductor not initialized");
     },
     update: () => {

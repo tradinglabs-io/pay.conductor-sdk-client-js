@@ -1,5 +1,5 @@
 import { PayConductorConfig, PaymentMethod, PaymentResult } from './iframe/types';
-export interface PayConductorEmbedProps extends Omit<PayConductorConfig, "intentToken"> {
+export interface PayConductorEmbedProps extends Omit<PayConductorConfig, "orderId"> {
     children?: any;
     showActionButtons?: boolean;
     debug?: boolean;

@@ -5,7 +5,7 @@ export function usePayConductor(): UsePayConductorReturn {
   const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const config = ctx?.config ? {
     publicKey: ctx.config.publicKey,
-    intentToken: ctx.config.intentToken,
+    orderId: ctx.config.orderId,
     theme: ctx.config.theme,
     locale: ctx.config.locale
   } : {};

@@ -39,7 +39,7 @@ export function sendMessageToIframe(iframe: HTMLIFrameElement | Element | undefi
 }
 export function confirmPayment(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, options: ConfirmPaymentOptions): Promise<PaymentResult> {
   return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.CONFIRM_PAYMENT, {
-    intentToken: options.intentToken
+    orderId: options.orderId
   }) as Promise<PaymentResult>;
 }
 export function validatePayment(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, data: unknown): Promise<boolean> {

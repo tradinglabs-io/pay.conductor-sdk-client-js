@@ -1,6 +1,6 @@
 import { PayConductorConfig, PaymentMethod, PaymentResult } from "./iframe/types";
 export type ConfirmPaymentOptions = {
-    intentToken: string;
+    orderId: string;
     returnUrl?: string;
 };
 export type SubmitResult = {

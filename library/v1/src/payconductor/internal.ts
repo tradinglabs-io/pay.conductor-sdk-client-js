@@ -49,7 +49,7 @@ export function confirmPayment(
 	options: ConfirmPaymentOptions,
 ): Promise<PaymentResult> {
 	return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.CONFIRM_PAYMENT, {
-		intentToken: options.intentToken,
+		orderId: options.orderId,
 	}) as Promise<PaymentResult>;
 }
 

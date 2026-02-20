@@ -11,18 +11,20 @@ A unified payment SDK that provides seamless integration with PayConductor's pay
 - **TypeScript First** - Full type definitions included
 - **Secure Communication** - Built-in postMessage-based communication with payment iframe
 - **Customizable Theming** - Flexible theme configuration to match your brand
+- **Flexible Checkout Layout** - Developer controls where the iframe is rendered via `<PayConductorCheckoutElement>`
+- **Payment Method Selection** - Detect which payment method the user chose before confirming
 - **Lightweight** - Minimal bundle footprint
 
 ## Installation
 
 ```bash
-npm install @payconductor-sdk-client-js
+npm install @payconductor-sdk-web/library-react
 # or
-yarn add @payconductor-sdk-client-js
+yarn add @payconductor-sdk-web/library-react
 # or
-pnpm add @payconductor-sdk-client-js
+pnpm add @payconductor-sdk-web/library-react
 # or
-bun add @payconductor-sdk-client-js
+bun add @payconductor-sdk-web/library-react
 ```
 
 ## Quick Start
@@ -30,45 +32,55 @@ bun add @payconductor-sdk-client-js
 ### React
 
 ```tsx
-import { PayConductor, useElement, usePayConductor, type PaymentResult } from '@payconductor-sdk-client-js/library-react';
-import { useState, useEffect } from 'react';
+import {
+  PayConductor,
+  PayConductorCheckoutElement,
+  usePayConductor,
+  usePayconductorElement,
+  type PaymentMethod,
+  type PaymentResult,
+} from '@payconductor-sdk-web/library-react';
 
-function Checkout() {
+function CheckoutForm() {
   const { isReady, error } = usePayConductor();
-  const { submit, confirmPayment, update } = useElement();
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
+  const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-  useEffect(() => {
-    update({ billingDetails: { name: clientName, email: clientEmail } });
-  }, [clientName, clientEmail, update]);
-
-  const handlePay = async () => {
-    const { error: submitError } = await submit();
-    if (submitError) {
-      console.error(submitError.message);
-      return;
-    }
-    const result: PaymentResult = await confirmPayment({
-      intentToken: 'pi_xxx_intent_token_xxx',
-      returnUrl: window.location.href,
+  const handleFinalize = async () => {
+    // 1. Create the Draft order in your backend to get the orderId
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({ payment: { paymentMethod: 'Draft' } }),
     });
+    const { id: orderId } = await response.json();
+
+    // 2. Confirm payment with the orderId
+    const result: PaymentResult = await confirmPayment({ orderId });
     console.log(result);
   };
 
   return (
+    <div>
+      <PayConductorCheckoutElement height="600px" />
+      <button onClick={handleFinalize} disabled={!isReady}>
+        Finalizar compra
+      </button>
+      {error && <div>Erro: {error}</div>}
+    </div>
+  );
+}
+
+function App() {
+  return (
     <PayConductor
       publicKey="pk_test_123"
-      intentToken="pi_test_abc123"
-      theme={{ primaryColor: '#0066ff' }}
       locale="pt-BR"
       debug={true}
+      theme={{ primaryColor: '#0066ff' }}
       onReady={() => console.log('Ready')}
       onPaymentComplete={(result) => console.log(result)}
+      onPaymentMethodSelected={(method: PaymentMethod) => console.log(method)}
     >
-      <input placeholder="Name" value={clientName} onInput={(e) => setClientName(e.currentTarget.value)} />
-      <input placeholder="Email" value={clientEmail} onInput={(e) => setClientEmail(e.currentTarget.value)} />
-      <button onClick={handlePay} disabled={!isReady}>Pay</button>
+      <CheckoutForm />
     </PayConductor>
   );
 }
@@ -80,38 +92,35 @@ function Checkout() {
 <template>
   <PayConductor
     public-key="pk_test_123"
-    intent-token="pi_test_abc123"
-    :theme="{ primaryColor: '#0066ff' }"
     locale="pt-BR"
+    :theme="{ primaryColor: '#0066ff' }"
     @payment-complete="onPaymentComplete"
+    @payment-method-selected="onPaymentMethodSelected"
   >
-    <input v-model="clientName" placeholder="Name" />
-    <input v-model="clientEmail" placeholder="Email" />
-    <button @click="handlePay" :disabled="!isReady">Pay</button>
+    <PayConductorCheckoutElement height="600px" />
+    <button @click="handleFinalize" :disabled="!isReady">
+      Finalizar compra
+    </button>
   </PayConductor>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import { PayConductor, useElement, usePayConductor } from '@payconductor-sdk-client-js/library-vue';
+import { PayConductor, PayConductorCheckoutElement, usePayConductor, usePayconductorElement } from '@payconductor-sdk-web/library-vue';
 
 const { isReady } = usePayConductor();
-const { submit, confirmPayment, update } = useElement();
-const clientName = ref('');
-const clientEmail = ref('');
+const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-watch([clientName, clientEmail], () => {
-  update({ billingDetails: { name: clientName.value, email: clientEmail.value } });
-});
-
-const handlePay = async () => {
-  const { error: submitError } = await submit();
-  if (submitError) return;
-  const result = await confirmPayment({ intentToken: 'pi_xxx_intent_token_xxx', returnUrl: window.location.href });
-  console.log(result);
+const handleFinalize = async () => {
+  const response = await fetch('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify({ payment: { paymentMethod: 'Draft' } }),
+  });
+  const { id: orderId } = await response.json();
+  await confirmPayment({ orderId });
 };
 
 const onPaymentComplete = (result) => console.log(result);
+const onPaymentMethodSelected = (method) => console.log(method);
 </script>
 ```
 
@@ -119,95 +128,181 @@ const onPaymentComplete = (result) => console.log(result);
 
 ```svelte
 <script>
-  import { PayConductor, useElement, usePayConductor } from '@payconductor-sdk-client-js/library-svelte';
+  import {
+    PayConductor,
+    PayConductorCheckoutElement,
+    usePayConductor,
+    usePayconductorElement,
+  } from '@payconductor-sdk-web/library-svelte';
 
   const { isReady, error } = usePayConductor();
-  const { submit, confirmPayment, update } = useElement();
+  const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-  let clientName = '';
-  let clientEmail = '';
-
-  $: update({ billingDetails: { name: clientName, email: clientEmail } });
-
-  const handlePay = async () => {
-    const { error: submitError } = await submit();
-    if (submitError) return;
-    const result = await confirmPayment({ intentToken: 'pi_xxx_intent_token_xxx', returnUrl: window.location.href });
+  async function handleFinalize() {
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({ payment: { paymentMethod: 'Draft' } }),
+    });
+    const { id: orderId } = await response.json();
+    const result = await confirmPayment({ orderId });
     console.log(result);
-  };
+  }
 </script>
 
 <PayConductor
   publicKey="pk_test_123"
-  intentToken="pi_test_abc123"
-  theme={{ primaryColor: '#0066ff' }}
   locale="pt-BR"
   debug={true}
+  theme={{ primaryColor: '#0066ff' }}
   onPaymentComplete={(result) => console.log(result)}
+  onPaymentMethodSelected={(method) => console.log(method)}
 >
-  <input bind:value={clientName} placeholder="Name" />
-  <input bind:value={clientEmail} placeholder="Email" />
-  <button on:click={handlePay} disabled={!$isReady}>Pay</button>
+  <PayConductorCheckoutElement height="600px" />
+  <button on:click={handleFinalize} disabled={!$isReady}>
+    Finalizar compra
+  </button>
 </PayConductor>
+```
+
+## Payment Flow
+
+```
+1. Mount <PayConductor publicKey="pk_xxx" ...>
+   └─ Registers window.PayConductor, adds message listener
+   └─ Stores iframeUrl internally (no iframe rendered yet)
+
+2. Mount <PayConductorCheckoutElement height="600px" />
+   └─ Reads iframeUrl from window.PayConductor
+   └─ Renders the payment iframe
+   └─ iframe loads → fetches payment methods → sends Ready
+
+3. SDK receives Ready → sends config (theme, locale, paymentMethods)
+
+4. User selects payment method
+   └─ onPaymentMethodSelected callback fires
+   └─ getSelectedPaymentMethod() returns the chosen method
+
+5. User clicks "Confirm" button (your button, outside the iframe)
+   └─ Your backend creates a Draft order → returns { id: "ord_xxx" }
+   └─ element.confirmPayment({ orderId: "ord_xxx" })
+   └─ iframe collects form data → POST /orders/:id/confirm
+
+6. SDK receives PaymentComplete/Failed/Pending → callbacks fire
 ```
 
 ## API Reference
 
-### PayConductor
+### `<PayConductor />`
 
-Main component that initializes the payment iframe.
+Provider component that initializes the payment session. **Does not render the iframe directly** — use `<PayConductorCheckoutElement>` for that.
 
 | Prop | Type | Description |
 |------|------|-------------|
 | `publicKey` | `string` | Your PayConductor public key |
-| `intentToken` | `string` | Payment intent token |
 | `theme` | `PayConductorTheme` | Theme customization options |
-| `locale` | `string` | Locale (e.g., 'en-US', 'pt-BR') |
-| `height` | `string` | Iframe height (default: '500px') |
-| `debug` | `boolean` | Enable debug mode with prefixed console.log for key events |
-| `onReady` | `function` | Called when iframe is ready |
-| `onError` | `function` | Called when an error occurs |
-| `onPaymentComplete` | `function` | Called when payment is completed |
+| `locale` | `string` | Locale (e.g., `'pt-BR'`, `'en-US'`) |
+| `paymentMethods` | `PaymentMethod[] \| "all"` | Payment methods to display |
+| `defaultPaymentMethod` | `PaymentMethod` | Pre-selected payment method |
+| `paymentMethodsConfig` | `PaymentMethodConfig[]` | Per-method config (installments, discounts) |
+| `methodsDirection` | `"vertical" \| "horizontal"` | Layout direction of payment methods |
+| `showPaymentButtons` | `boolean` | Whether to show native action buttons in iframe |
+| `nuPayConfig` | `NuPayData` | Required when NuPay is an available method |
+| `debug` | `boolean` | Enable prefixed console.log for key events |
+| `onReady` | `() => void` | Called when iframe is ready |
+| `onError` | `(error: Error) => void` | Called when an error occurs |
+| `onPaymentComplete` | `(result: PaymentResult) => void` | Called when payment succeeds |
+| `onPaymentFailed` | `(result: PaymentResult) => void` | Called when payment fails |
+| `onPaymentPending` | `(result: PaymentResult) => void` | Called when payment is pending |
+| `onPaymentMethodSelected` | `(method: PaymentMethod) => void` | Called when user selects a payment method |
 
-### usePayConductor
+### `<PayConductorCheckoutElement />`
 
-Hook that provides frame state and config.
+Component that renders the payment iframe. Place it inside `<PayConductor>` wherever you want the iframe to appear in your layout.
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `height` | `string` | Iframe height (default: `'600px'`) |
+
+### `usePayConductor()`
+
+Hook that provides frame state.
 
 ```tsx
-const { isReady, error, publicKey, intentToken, theme, locale } = usePayConductor();
+const { isReady, error } = usePayConductor();
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `isReady` | `boolean` | Whether frame is ready |
+| `isReady` | `boolean` | Whether iframe is ready |
 | `error` | `string \| null` | Error message if any |
-| `publicKey` | `string` | Public key from config |
-| `intentToken` | `string` | Intent token from config |
-| `theme` | `PayConductorTheme` | Theme from config |
-| `locale` | `string` | Locale from config |
 
-### useElement
+### `usePayconductorElement()`
 
-Hook that provides payment methods.
+Hook that provides payment actions.
 
 ```tsx
-const { submit, confirmPayment, update, validate, reset, getSelectedPaymentMethod, updateConfig, updateIntentToken } = useElement();
+const {
+  init,
+  confirmPayment,
+  validate,
+  reset,
+  getSelectedPaymentMethod,
+  updateConfig,
+  updateorderId,
+  update,
+  submit,
+} = usePayconductorElement();
 ```
 
-| Method | Description |
-|--------|-------------|
-| `submit()` | Submits the payment form, returns `{ error?, paymentMethod? }` |
-| `confirmPayment(options)` | Confirms the payment with `{ intentToken, returnUrl? }` |
-| `update(options)` | Updates billing details `{ billingDetails?: { name, email, phone, address } }` |
-| `validate(data)` | Validates payment data |
-| `reset()` | Resets the payment form |
-| `getSelectedPaymentMethod()` | Returns the selected payment method |
-| `updateConfig(config)` | Updates theme, locale, or paymentMethods config |
-| `updateIntentToken(token)` | Updates the intent token |
+| Method | Signature | Description                                 |
+|--------|-----------|---------------------------------------------|
+| `init` | `(config: PayConductorConfig) => Promise<void>` | Sends full config to iframe                 |
+| `confirmPayment` | `(options: { orderId: string }) => Promise<PaymentResult>` | Triggers payment confirmation in iframe     |
+| `validate` | `(data: unknown) => Promise<boolean>` | Validates current form data                 |
+| `reset` | `() => Promise<void>` | Resets the payment form                     |
+| `getSelectedPaymentMethod` | `() => PaymentMethod \| null` | Returns the payment method selected by user |
+| `updateConfig` | `(config: Partial<PayConductorConfig>) => void` | Updates theme, locale, or paymentMethods    |
+| `updateorderId` | `(orderId: string) => void` | Updates the order id in the iframe          |
+| `update` | `(options: UpdateOptions) => void` | Updates billing details                     |
+| `submit` | `() => Promise<SubmitResult>` | Submits the form (validate + format)        |
+
+## Payment Types
+
+```typescript
+import type {
+  PaymentConfirmData,
+  PixPaymentData,
+  CreditCardPaymentData,
+  BankSlipPaymentData,
+  NuPayPaymentData,
+  PicPayPaymentData,
+  CardPaymentData,
+} from '@payconductor-sdk-web/library-react';
+
+// Union of all payment data types (passed via confirmPayment)
+type PaymentConfirmData =
+  | PixPaymentData         // { paymentMethod: 'Pix', expirationInSeconds? }
+  | CreditCardPaymentData  // { paymentMethod: 'CreditCard', card, installments, softDescriptor? }
+  | BankSlipPaymentData    // { paymentMethod: 'BankSlip', expirationInDays? }
+  | NuPayPaymentData       // { paymentMethod: 'NuPay', nuPay: NuPayData }
+  | PicPayPaymentData;     // { paymentMethod: 'PicPay' }
+```
+
+## Supported Payment Methods
+
+| Method | Enum value |
+|--------|-----------|
+| Pix | `PaymentMethod.Pix` |
+| Credit Card | `PaymentMethod.CreditCard` |
+| Debit Card | `PaymentMethod.DebitCard` |
+| Bank Slip (Boleto) | `PaymentMethod.BankSlip` |
+| NuPay | `PaymentMethod.NuPay` |
+| PicPay | `PaymentMethod.PicPay` |
+| Apple Pay | `PaymentMethod.ApplePay` |
+| Google Pay | `PaymentMethod.GooglePay` |
+| Amazon Pay | `PaymentMethod.AmazonPay` |
 
 ## Theming
-
-Customize the SDK appearance with the theme prop:
 
 ```javascript
 const theme = {
@@ -246,12 +341,28 @@ const theme = {
 
 | Framework | Package |
 |-----------|---------|
-| React | `@payconductor-sdk-client-js/library-react` |
-| Vue | `@payconductor-sdk-client-js/library-vue` |
-| Svelte | `@payconductor-sdk-client-js/library-svelte` |
-| Qwik | `@payconductor-sdk-client-js/library-qwik` |
-| Angular | `@payconductor-sdk-client-js/library-angular` |
-| Web Components | `@payconductor-sdk-client-js/library-custom-element` |
+| React | `@payconductor-sdk-web/library-react` |
+| Vue | `@payconductor-sdk-web/library-vue` |
+| Svelte | `@payconductor-sdk-web/library-svelte` |
+| Qwik | `@payconductor-sdk-web/library-qwik` |
+| Angular | `@payconductor-sdk-web/library-angular` |
+| Solid | `@payconductor-sdk-web/library-solid` |
+| Preact | `@payconductor-sdk-web/library-preact` |
+| Web Components | `@payconductor-sdk-web/library-webcomponent` |
+| React (Next.js RSC) | `@payconductor-sdk-web/library-rsc` |
+
+## Development
+
+```bash
+# Sync iframe types and constants
+bun sync
+
+# Build all packages
+bun build
+
+# Run React example
+cd examples/react && bun dev
+```
 
 ## License
 

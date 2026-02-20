@@ -111,7 +111,7 @@ export type PaymentMethod = {
     billingDetails?: BillingDetails;
 };
 export type PaymentResult = {
-    paymentIntentId: string;
+    orderId: string;
     status: 'succeeded' | 'pending' | 'failed';
     amount: number;
     currency: string;

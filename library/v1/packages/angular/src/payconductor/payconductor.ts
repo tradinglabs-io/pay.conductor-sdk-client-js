@@ -4,7 +4,7 @@ import { CommonModule } from "@angular/common";
 import { Component, Input } from "@angular/core";
 
 export interface PayConductorEmbedProps
-  extends Omit<PayConductorConfig, "intentToken"> {
+  extends Omit<PayConductorConfig, "orderId"> {
   children?: any;
   showActionButtons?: boolean;
   debug?: boolean;
@@ -130,9 +130,9 @@ export default class PayConductor {
         defaultPaymentMethod: this.defaultPaymentMethod,
       };
       const api: PayConductorApi = {
-        confirmPayment: (options: { intentToken: string }) => {
+        confirmPayment: (options: { orderId: string }) => {
           log("confirmPayment called", {
-            intentToken: options.intentToken,
+            orderId: options.orderId,
           });
           return confirmPayment(getIframe(), this.pendingMap, options);
         },

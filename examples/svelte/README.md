@@ -1,211 +1,238 @@
-# PayConductor SDK Client JS - Svelte
+# PayConductor SDK Web - Exemplo Svelte
 
-Svelte components for [PayConductor](https://payconductor.ai).
+Exemplo de integração do [PayConductor](https://payconductor.ai) com Svelte.
 
-[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-client-js.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-client-js)
+[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-svelte.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-svelte)
 
-## Requirements
+## Requisitos
 
-The minimum supported version of Svelte is v4.
+Versão mínima do Svelte: **v4**.
 
-## Installation
+## Instalação
 
 ```sh
-npm install @payconductor-sdk-client-js
+npm install @payconductor-sdk-web/library-svelte
 # or
-yarn add @payconductor-sdk-client-js
+yarn add @payconductor-sdk-web/library-svelte
 # or
-pnpm add @payconductor-sdk-client-js
+pnpm add @payconductor-sdk-web/library-svelte
+# or
+bun add @payconductor-sdk-web/library-svelte
+```
+
+## Executar o exemplo
+
+```sh
+bun install
+bun dev
 ```
 
 ## Quick Start
 
 ```svelte
-<script>
-  import { PayConductor, usePayment, useFrame } from '@payconductor-sdk-client-js/library-svelte';
+<script lang="ts">
+  import {
+    PayConductor,
+    PayConductorCheckoutElement,
+    usePayConductor,
+    usePayconductorElement,
+    type PaymentMethod,
+    type PaymentResult,
+  } from '@payconductor-sdk-web/library-svelte';
 
-  const { isReady, error: frameError } = useFrame();
-  const { createPaymentMethod, confirmPayment } = usePayment();
+  const { isReady, error } = usePayConductor();
+  const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-  let errorMessage = null;
+  let errorMessage: string | null = null;
   let isProcessing = false;
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  $: selectedMethod = getSelectedPaymentMethod();
 
-    if (!$isReady) {
-      return;
-    }
+  async function handleFinalize() {
+    if (!$isReady) return;
 
     isProcessing = true;
     errorMessage = null;
 
     try {
-      const paymentMethod = await createPaymentMethod({
-        billingDetails: {
-          name: 'John Doe',
-          email: 'john@example.com'
-        }
+      // 1. Crie o pedido Draft no seu backend para obter o orderId
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment: {
+            paymentMethod: 'Draft',
+            availablePaymentMethods: ['CreditCard', 'Pix', 'BankSlip'],
+          },
+        }),
       });
+      const { id: orderId } = await response.json();
 
-      console.log('Payment method created:', paymentMethod);
+      // 2. Confirme o pagamento com o orderId obtido
+      const result: PaymentResult = await confirmPayment({ orderId });
+      console.log('Resultado:', result);
 
-      const result = await confirmPayment(paymentMethod.id);
-      console.log('Payment confirmed:', result);
-    } catch (error) {
-      errorMessage = error.message || 'Payment failed';
+      if (result.status === 'succeeded') {
+        alert('Pagamento realizado com sucesso!');
+      }
+    } catch (err: any) {
+      errorMessage = err.message || 'Falha no pagamento';
     } finally {
       isProcessing = false;
     }
   }
-
-  function handleReady() {
-    console.log('PayConductor is ready');
-  }
-
-  function handleError(error) {
-    console.error('Error:', error);
-  }
-
-  function handlePaymentComplete(result) {
-    console.log('Payment completed:', result);
-    alert('Payment successful!');
-  }
 </script>
 
 <PayConductor
-  clientId="your_client_id"
-  token="your_token"
-  theme={{ 
-    primaryColor: '#0066ff',
-    fontFamily: 'Roboto, sans-serif',
-    borderRadius: '8px'
-  }}
-  locale="en-US"
-  height="500px"
-  onReady={handleReady}
-  onError={handleError}
-  onPaymentComplete={handlePaymentComplete}
+  publicKey="pk_test_123"
+  locale="pt-BR"
+  debug={true}
+  theme={{ primaryColor: '#0066ff', borderRadius: '8px' }}
+  onReady={() => console.log('Ready')}
+  onPaymentComplete={(result) => console.log('Completo:', result)}
+  onPaymentMethodSelected={(method) => console.log('Método:', method)}
 >
-  <form on:submit={handleSubmit}>
-    <div style="margin-bottom: 16px">
-      <label style="display: block; margin-bottom: 8px">
-        Full Name
-      </label>
-      <input 
-        type="text" 
-        placeholder="John Doe"
-        style="width: 100%; padding: 12px; border: 1px solid #e6ebf1; border-radius: 4px"
-      />
-    </div>
-    
-    <div style="margin-bottom: 16px">
-      <label style="display: block; margin-bottom: 8px">
-        Email
-      </label>
-      <input 
-        type="email" 
-        placeholder="john@example.com"
-        style="width: 100%; padding: 12px; border: 1px solid #e6ebf1; border-radius: 4px"
-      />
-    </div>
-    
-    <button 
-      type="submit" 
-      disabled={!$isReady || isProcessing}
-      style="width: 100%; padding: 16px; background-color: {$isReady ? '#0066ff' : '#cfd7df'}; color: #ffffff; border: none; border-radius: 4px; cursor: {$isReady ? 'pointer' : 'not-allowed'}; font-size: 16px; font-weight: 600"
-    >
-      {isProcessing ? 'Processing...' : 'Pay'}
-    </button>
+  <!-- O iframe é renderizado aqui -->
+  <PayConductorCheckoutElement height="600px" />
 
-    {#if errorMessage}
-      <div style="color: #fa755a; margin-top: 16px">
-        {errorMessage}
-      </div>
-    {/if}
+  {#if selectedMethod}
+    <p>Método selecionado: <strong>{selectedMethod}</strong></p>
+  {/if}
 
-    {#if $frameError}
-      <div style="color: #fa755a; margin-top: 16px">
-        Frame error: {$frameError}
-      </div>
-    {/if}
-  </form>
+  <button
+    type="button"
+    disabled={!$isReady || isProcessing}
+    on:click={handleFinalize}
+  >
+    {isProcessing ? 'Processando...' : 'Finalizar compra'}
+  </button>
+
+  {#if errorMessage}
+    <div style="color: #fa755a">{errorMessage}</div>
+  {/if}
+
+  {#if $error}
+    <div style="color: #fa755a">Erro: {$error}</div>
+  {/if}
 </PayConductor>
 ```
 
 ## API Reference
 
-### PayConductor
+### `<PayConductor />`
 
-The component that initializes the PayConductor iframe.
-
-```svelte
-<PayConductor
-  clientId="your_client_id"
-  token="your_token"
-  theme={{ primaryColor: '#0066ff' }}
-  locale="en-US"
-  height="500px"
-  onReady={() => {}}
-  onError={(error) => {}}
-  onPaymentComplete={(result) => {}}
-/>
-```
+Componente provider que inicializa a sessão de pagamento. **Não renderiza o iframe diretamente** — use `<PayConductorCheckoutElement>` para isso.
 
 #### Props
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `clientId` | `string` | Your PayConductor client ID |
-| `token` | `string` | Your PayConductor token/order token |
-| `theme` | `object` | Custom theme options |
-| `locale` | `string` | Locale for the payment form (e.g., 'en-US', 'pt-BR') |
-| `height` | `string` | Height of the iframe (default: '500px') |
-| `onReady` | `function` | Called when the iframe is ready |
-| `onError` | `function` | Called when an error occurs |
-| `onPaymentComplete` | `function` | Called when payment is complete |
+| `publicKey` | `string` | Sua chave pública do PayConductor |
+| `theme` | `PayConductorTheme` | Opções de tema |
+| `locale` | `string` | Localização (ex: `'pt-BR'`, `'en-US'`) |
+| `paymentMethods` | `PaymentMethod[] \| "all"` | Métodos de pagamento disponíveis |
+| `defaultPaymentMethod` | `PaymentMethod` | Método pré-selecionado |
+| `paymentMethodsConfig` | `PaymentMethodConfig[]` | Config por método (parcelas, descontos) |
+| `methodsDirection` | `"vertical" \| "horizontal"` | Direção do layout dos métodos |
+| `showPaymentButtons` | `boolean` | Exibe botões de ação dentro do iframe |
+| `nuPayConfig` | `NuPayData` | Obrigatório quando NuPay estiver disponível |
+| `debug` | `boolean` | Habilita logs detalhados no console |
+| `onReady` | `() => void` | Chamado quando o iframe está pronto |
+| `onError` | `(error: Error) => void` | Chamado em caso de erro |
+| `onPaymentComplete` | `(result: PaymentResult) => void` | Chamado quando o pagamento é concluído |
+| `onPaymentFailed` | `(result: PaymentResult) => void` | Chamado quando o pagamento falha |
+| `onPaymentPending` | `(result: PaymentResult) => void` | Chamado quando o pagamento fica pendente |
+| `onPaymentMethodSelected` | `(method: PaymentMethod) => void` | Chamado quando o usuário seleciona um método |
 
-### usePayment
+### `<PayConductorCheckoutElement />`
 
-Svelte store that provides payment methods.
+Componente que renderiza o iframe de pagamento. Posicione-o dentro de `<PayConductor>` onde quiser exibir o iframe.
 
-```svelte
-<script>
-  const { createPaymentMethod, confirmPayment, validate, reset } = usePayment();
-</script>
-```
+| Prop | Type | Description |
+|------|------|-------------|
+| `height` | `string` | Altura do iframe (padrão: `'600px'`) |
 
-#### Returns
+### `usePayConductor()`
 
-| Method | Description |
-|--------|-------------|
-| `createPaymentMethod(options)` | Creates a new payment method |
-| `confirmPayment(paymentMethodId)` | Confirms the payment |
-| `validate(data)` | Validates payment data |
-| `reset()` | Resets the payment form |
-
-### useFrame
-
-Svelte store that provides frame state.
+Store que fornece o estado do frame.
 
 ```svelte
 <script>
-  const { iframe, isReady, error } = useFrame();
+  const { isReady, error } = usePayConductor();
+  // $isReady, $error são Svelte stores
 </script>
 ```
-
-#### Returns
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `iframe` | `HTMLIFrameElement` | Reference to the iframe element |
-| `isReady` | `boolean` | Whether the frame is ready (Svelte store) |
-| `error` | `string | null` | Error message if any (Svelte store) |
+| `isReady` | `Readable<boolean>` | Se o iframe está pronto (Svelte store) |
+| `error` | `Readable<string \| null>` | Mensagem de erro (Svelte store) |
 
-## TypeScript Support
+### `usePayconductorElement()`
 
-PayConductor SDK Client JS is packaged with TypeScript declarations.
+Fornece métodos de ação de pagamento.
+
+```svelte
+<script>
+  const {
+    init,
+    confirmPayment,
+    validate,
+    reset,
+    getSelectedPaymentMethod,
+    updateConfig,
+    updateorderId,
+    update,
+    submit,
+  } = usePayconductorElement();
+</script>
+```
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `init` | `(config: PayConductorConfig) => Promise<void>` | Envia configuração completa ao iframe |
+| `confirmPayment` | `({ orderId: string }) => Promise<PaymentResult>` | Confirma o pagamento no iframe |
+| `validate` | `(data: unknown) => Promise<boolean>` | Valida os dados do formulário |
+| `reset` | `() => Promise<void>` | Reseta o formulário de pagamento |
+| `getSelectedPaymentMethod` | `() => PaymentMethod \| null` | Retorna o método selecionado pelo usuário |
+| `updateConfig` | `(config: Partial<PayConductorConfig>) => void` | Atualiza tema, locale ou métodos |
+| `updateorderId` | `(orderId: string) => void` | Atualiza o orderId no iframe |
+| `update` | `(options: UpdateOptions) => void` | Atualiza dados de cobrança |
+| `submit` | `() => Promise<SubmitResult>` | Envia o formulário (valida + formata) |
+
+## TypeScript
 
 ```ts
-import { PaymentResult, PaymentMethod } from '@payconductor-sdk-client-js/library-svelte';
+import type {
+  PaymentResult,
+  PaymentMethod,
+  PayConductorTheme,
+  PayConductorConfig,
+  PaymentConfirmData,
+} from '@payconductor-sdk-web/library-svelte';
+```
+
+## Fluxo Completo
+
+```
+1. <PayConductor publicKey="pk_xxx"> monta
+   └─ Registra window.PayConductor, guarda iframeUrl
+
+2. <PayConductorCheckoutElement /> monta
+   └─ Lê iframeUrl, registra o iframe em window.PayConductor.frame.iframe
+   └─ Renderiza o iframe
+
+3. iframe carrega → busca métodos de pagamento → envia Ready
+   SDK recebe Ready → envia config (theme, locale, paymentMethods)
+
+4. Usuário seleciona método de pagamento
+   └─ onPaymentMethodSelected é chamado
+   └─ getSelectedPaymentMethod() retorna o método
+
+5. Usuário clica em "Finalizar" (botão do merchant, fora do iframe)
+   └─ Backend cria pedido Draft → retorna { id: "ord_xxx" }
+   └─ confirmPayment({ orderId: "ord_xxx" })
+   └─ iframe coleta dados → POST /orders/:id/confirm
+
+6. SDK recebe PaymentComplete/Failed/Pending → callbacks disparam
 ```

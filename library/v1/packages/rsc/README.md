@@ -1,8 +1,8 @@
 # @payconductor-sdk-web/library-rsc
 
-React Server Components SDK for integrating with PayConductor Payment Gateway. Optimized for Next.js App Router.
+React Server Components SDK para integração com o PayConductor. Otimizado para o Next.js App Router.
 
-## Installation
+## Instalação
 
 ```bash
 npm install @payconductor-sdk-web/library-rsc
@@ -10,98 +10,94 @@ npm install @payconductor-sdk-web/library-rsc
 yarn add @payconductor-sdk-web/library-rsc
 # or
 pnpm add @payconductor-sdk-web/library-rsc
+# or
+bun add @payconductor-sdk-web/library-rsc
 ```
 
-## Basic Usage with Next.js App Router
+## Uso com Next.js App Router
 
-### 1. Create a client component for checkout
+### 1. Crie um Client Component para o checkout
 
 ```tsx
 // components/CheckoutForm.tsx
 "use client";
 
 import {
-  useElement,
+  PayConductorCheckoutElement,
   usePayConductor,
+  usePayconductorElement,
+  type PaymentMethod,
   type PaymentResult,
 } from "@payconductor-sdk-web/library-rsc";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export function CheckoutForm() {
   const { isReady, error } = usePayConductor();
-  const { submit, confirmPayment, update } = useElement();
+  const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
 
-  useEffect(() => {
-    update({
-      billingDetails: {
-        name: clientName,
-        email: clientEmail,
-      },
-    });
-  }, [clientName, clientEmail, update]);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
+  const handleFinalize = async () => {
     if (!isReady) return;
 
     setIsProcessing(true);
     setErrorMessage(null);
 
     try {
-      const { error: submitError } = await submit();
-
-      if (submitError) {
-        setErrorMessage(submitError.message || "Validation failed");
-        setIsProcessing(false);
-        return;
-      }
-
-      const result: PaymentResult = await confirmPayment({
-        intentToken: "pi_xxx_intent_token_xxx",
-        returnUrl: window.location.href,
+      // 1. Crie o pedido Draft no seu backend para obter o orderId
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payment: {
+            paymentMethod: "Draft",
+            availablePaymentMethods: ["CreditCard", "Pix", "BankSlip"],
+          },
+        }),
       });
+      const { id: orderId } = await response.json();
+
+      // 2. Confirme o pagamento com o orderId obtido
+      const result: PaymentResult = await confirmPayment({ orderId });
 
       if (result.status === "succeeded") {
-        alert("Payment successful!");
+        alert("Pagamento realizado com sucesso!");
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "Payment failed");
+      setErrorMessage(err.message || "Falha no pagamento");
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const selectedMethod = getSelectedPaymentMethod();
+
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        placeholder="Full name"
-        value={clientName}
-        onChange={(e) => setClientName(e.target.value)}
-      />
-      <input
-        type="email"
-        placeholder="Email"
-        value={clientEmail}
-        onChange={(e) => setClientEmail(e.target.value)}
-      />
-      <button type="submit" disabled={!isReady || isProcessing}>
-        {isProcessing ? "Processing..." : "Pay now"}
+    <div>
+      {/* O iframe é renderizado aqui */}
+      <PayConductorCheckoutElement height="500px" />
+
+      {selectedMethod && (
+        <p>Método selecionado: <strong>{selectedMethod}</strong></p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleFinalize}
+        disabled={!isReady || isProcessing}
+      >
+        {isProcessing ? "Processando..." : "Finalizar compra"}
       </button>
+
       {errorMessage && <div>{errorMessage}</div>}
-      {error && <div>Error: {error}</div>}
-    </form>
+      {error && <div>Erro: {error}</div>}
+    </div>
   );
 }
 ```
 
-### 2. Use in a Server Component page
+### 2. Use em um Server Component
 
 ```tsx
 // app/checkout/page.tsx
@@ -114,14 +110,13 @@ export default function CheckoutPage() {
       <h1>Checkout</h1>
       <PayConductor
         publicKey="pk_test_123"
-        intentToken="pi_test_abc123"
+        locale="pt-BR"
         theme={{ primaryColor: "#0066ff" }}
-        locale="en-US"
-        height="500px"
         debug={true}
         onReady={() => console.log("Ready")}
         onError={(err) => console.error(err)}
         onPaymentComplete={(result) => console.log(result)}
+        onPaymentMethodSelected={(method) => console.log("Método:", method)}
       >
         <CheckoutForm />
       </PayConductor>
@@ -130,26 +125,24 @@ export default function CheckoutPage() {
 }
 ```
 
-### 3. Passing server-side data
+### 3. Passando dados do servidor
 
 ```tsx
 // app/checkout/page.tsx
 import { PayConductor } from "@payconductor-sdk-web/library-rsc";
 import { CheckoutForm } from "@/components/CheckoutForm";
-import { getPaymentIntent } from "@/lib/payconductor";
 
 export default async function CheckoutPage() {
-  // Fetch payment intent from your backend
-  const { intentToken, amount, currency } = await getPaymentIntent();
-
+  // Configurações podem vir do servidor — publicKey, theme, locale, etc.
+  // O orderId NÃO é passado aqui; ele é obtido no clique de confirmar.
   return (
     <main>
-      <h1>Checkout - {amount} {currency}</h1>
+      <h1>Checkout</h1>
       <PayConductor
         publicKey={process.env.NEXT_PUBLIC_PAYCONDUCTOR_PUBLIC_KEY!}
-        intentToken={intentToken}
+        locale="pt-BR"
         theme={{ primaryColor: "#0066ff" }}
-        locale="en-US"
+        paymentMethods={["CreditCard", "Pix", "BankSlip"]}
       >
         <CheckoutForm />
       </PayConductor>
@@ -162,66 +155,79 @@ export default async function CheckoutPage() {
 
 ### `<PayConductor />`
 
-Client-side component that initializes the payment iframe. Marked with `"use client"` for RSC compatibility.
+Componente provider que inicializa a sessão de pagamento. Marcado com `"use client"` para compatibilidade com RSC. **Não renderiza o iframe diretamente** — use `<PayConductorCheckoutElement>` dentro do seu Client Component.
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `publicKey` | `string` | Your PayConductor public key |
-| `intentToken` | `string` | Payment intent token |
-| `theme` | `PayConductorTheme` | Theme configuration |
-| `locale` | `string` | Locale (e.g., 'en-US', 'pt-BR') |
-| `height` | `string` | Iframe height (default: '500px') |
-| `debug` | `boolean` | Enable debug mode with prefixed console.log for key events |
-| `onReady` | `() => void` | Callback when iframe is ready |
-| `onError` | `(error: Error) => void` | Error callback |
-| `onPaymentComplete` | `(result: PaymentResult) => void` | Payment complete callback |
+| `publicKey` | `string` | Sua chave pública do PayConductor |
+| `theme` | `PayConductorTheme` | Opções de tema |
+| `locale` | `string` | Localização (ex: `'pt-BR'`, `'en-US'`) |
+| `paymentMethods` | `PaymentMethod[] \| "all"` | Métodos de pagamento disponíveis |
+| `defaultPaymentMethod` | `PaymentMethod` | Método pré-selecionado |
+| `paymentMethodsConfig` | `PaymentMethodConfig[]` | Config por método (parcelas, descontos) |
+| `methodsDirection` | `"vertical" \| "horizontal"` | Direção do layout dos métodos |
+| `showPaymentButtons` | `boolean` | Exibe botões de ação dentro do iframe |
+| `nuPayConfig` | `NuPayData` | Obrigatório quando NuPay estiver disponível |
+| `debug` | `boolean` | Habilita logs detalhados no console |
+| `onReady` | `() => void` | Chamado quando o iframe está pronto |
+| `onError` | `(error: Error) => void` | Chamado em caso de erro |
+| `onPaymentComplete` | `(result: PaymentResult) => void` | Chamado quando o pagamento é concluído |
+| `onPaymentFailed` | `(result: PaymentResult) => void` | Chamado quando o pagamento falha |
+| `onPaymentPending` | `(result: PaymentResult) => void` | Chamado quando o pagamento fica pendente |
+| `onPaymentMethodSelected` | `(method: PaymentMethod) => void` | Chamado quando o usuário seleciona um método |
+
+### `<PayConductorCheckoutElement />`
+
+Componente que renderiza o iframe de pagamento. Use somente em Client Components (`"use client"`).
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `height` | `string` | Altura do iframe (padrão: `'600px'`) |
 
 ### `usePayConductor()`
 
-Hook that returns frame state and configuration. Use only in Client Components.
+Hook que retorna o estado do frame. Use somente em Client Components.
 
 ```tsx
 "use client";
-
-const { isReady, error, publicKey, intentToken, theme, locale } = usePayConductor();
+const { isReady, error } = usePayConductor();
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `isReady` | `boolean` | Whether iframe is ready |
-| `error` | `string \| null` | Error message if any |
-| `publicKey` | `string` | Public key from config |
-| `intentToken` | `string` | Intent token from config |
-| `theme` | `PayConductorTheme` | Theme from config |
-| `locale` | `string` | Locale from config |
+| `isReady` | `boolean` | Se o iframe está pronto |
+| `error` | `string \| null` | Mensagem de erro, se houver |
 
-### `useElement()`
+### `usePayconductorElement()`
 
-Hook that provides payment methods. Use only in Client Components.
+Hook que fornece métodos de ação de pagamento. Use somente em Client Components.
 
 ```tsx
 "use client";
-
 const {
-  submit,
+  init,
   confirmPayment,
-  update,
   validate,
   reset,
+  getSelectedPaymentMethod,
   updateConfig,
-  updateIntentToken
-} = useElement();
+  updateorderId,
+  update,
+  submit,
+} = usePayconductorElement();
 ```
 
-| Method | Description |
-|--------|-------------|
-| `submit()` | Submits the form, returns `{ error?, paymentMethod? }` |
-| `confirmPayment(options)` | Confirms payment with `{ intentToken, returnUrl? }` |
-| `update(options)` | Updates billing details `{ billingDetails?: { name, email, phone, address } }` |
-| `validate(data)` | Validates payment data |
-| `reset()` | Resets the payment form |
-| `updateConfig(config)` | Updates theme, locale, or paymentMethods config |
-| `updateIntentToken(token)` | Updates the intent token |
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `init` | `(config: PayConductorConfig) => Promise<void>` | Envia configuração completa ao iframe |
+| `confirmPayment` | `({ orderId: string }) => Promise<PaymentResult>` | Confirma o pagamento no iframe |
+| `validate` | `(data: unknown) => Promise<boolean>` | Valida os dados do formulário |
+| `reset` | `() => Promise<void>` | Reseta o formulário de pagamento |
+| `getSelectedPaymentMethod` | `() => PaymentMethod \| null` | Retorna o método selecionado pelo usuário |
+| `updateConfig` | `(config: Partial<PayConductorConfig>) => void` | Atualiza tema, locale ou métodos |
+| `updateorderId` | `(orderId: string) => void` | Atualiza o orderId no iframe |
+| `update` | `(options: UpdateOptions) => void` | Atualiza dados de cobrança |
+| `submit` | `() => Promise<SubmitResult>` | Envia o formulário (valida + formata) |
 
 ## Theming
 
@@ -261,34 +267,71 @@ const theme: PayConductorTheme = {
 ## Types
 
 ```tsx
+import type {
+  PaymentResult,
+  PaymentMethod,
+  PayConductorTheme,
+  PayConductorConfig,
+  PaymentConfirmData,
+  PixPaymentData,
+  CreditCardPaymentData,
+  BankSlipPaymentData,
+  NuPayPaymentData,
+  PicPayPaymentData,
+  CardPaymentData,
+  BillingDetails,
+} from "@payconductor-sdk-web/library-rsc";
+```
+
+```tsx
 type PaymentResult = {
-  paymentIntentId: string;
+  orderId: string;
   status: "succeeded" | "pending" | "failed";
   amount: number;
   currency: string;
+  message?: string;
 };
 
-type BillingDetails = {
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: {
-    line1: string;
-    line2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-};
+type PaymentConfirmData =
+  | PixPaymentData         // { paymentMethod: 'Pix', expirationInSeconds? }
+  | CreditCardPaymentData  // { paymentMethod: 'CreditCard', card, installments, softDescriptor? }
+  | BankSlipPaymentData    // { paymentMethod: 'BankSlip', expirationInDays? }
+  | NuPayPaymentData       // { paymentMethod: 'NuPay', nuPay: NuPayData }
+  | PicPayPaymentData;     // { paymentMethod: 'PicPay' }
 ```
 
-## Differences from @payconductor-sdk-web/library-react
+## Diferenças do `@payconductor-sdk-web/library-react`
 
-- Optimized for Server Components and Next.js App Router
-- `PayConductor` component marked with `"use client"`
-- Hooks must only be used in Client Components
-- Allows passing server-side data (intentToken, config) directly to the component
+- Otimizado para Server Components e Next.js App Router
+- `PayConductor` é marcado com `"use client"` internamente
+- Hooks e `PayConductorCheckoutElement` devem ser usados somente em Client Components
+- Configurações (publicKey, theme, locale, paymentMethods) podem ser passadas a partir de dados do servidor
+- O `orderId` **não** é uma prop do `<PayConductor>` — ele é obtido via chamada ao backend no momento do clique de confirmar
+
+## Fluxo Completo
+
+```
+1. Server Component renderiza <PayConductor publicKey="pk_xxx" ...>
+   └─ Registra window.PayConductor, guarda iframeUrl
+
+2. Client Component renderiza <PayConductorCheckoutElement />
+   └─ Lê iframeUrl, registra o iframe em window.PayConductor.frame.iframe
+   └─ Renderiza o iframe
+
+3. iframe carrega → busca métodos de pagamento → envia Ready
+   SDK recebe Ready → envia config (theme, locale, paymentMethods)
+
+4. Usuário seleciona método de pagamento
+   └─ onPaymentMethodSelected é chamado
+   └─ getSelectedPaymentMethod() retorna o método
+
+5. Usuário clica em "Finalizar" (botão do merchant, fora do iframe)
+   └─ Backend cria pedido Draft → retorna { id: "ord_xxx" }
+   └─ confirmPayment({ orderId: "ord_xxx" })
+   └─ iframe coleta dados → POST /orders/:id/confirm
+
+6. SDK recebe PaymentComplete/Failed/Pending → callbacks disparam
+```
 
 ## License
 

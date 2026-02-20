@@ -197,7 +197,7 @@ export const defaultTheme: PayConductorTheme = {
 
 export type PayConductorConfig = {
 	publicKey: string;
-	intentToken?: string;
+	orderId?: string;
 	theme?: PayConductorTheme;
 	locale?: string;
 	paymentMethods?: PaymentMethod[] | "all";
@@ -248,7 +248,7 @@ export type PaymentMethodResult = {
 };
 
 export type PaymentResult = {
-	paymentIntentId: string;
+	orderId: string;
 	status: PaymentStatus;
 	amount: number;
 	currency: string;

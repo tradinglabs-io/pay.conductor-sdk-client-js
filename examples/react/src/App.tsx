@@ -1,107 +1,69 @@
 import {
 	PayConductor,
+	PayConductorCheckoutElement,
+	type PaymentMethod,
 	type PaymentResult,
-	useElement,
 	usePayConductor,
-} from "@payconductor-sdk-client-js/library-react";
-import { useEffect, useState } from "react";
+	usePayconductorElement,
+} from "@payconductor-sdk-web/library-react";
+import { useState } from "react";
 
 function CheckoutForm() {
 	const { isReady, error } = usePayConductor();
-	const { update, submit, confirmPayment } = useElement();
+	const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isProcessing, setIsProcessing] = useState(false);
-	const [clientName, setClientName] = useState("");
-	const [clientEmail, setClientEmail] = useState("");
 
-	useEffect(() => {
-		update({
-			billingDetails: {
-				name: clientName,
-				email: clientEmail,
-			},
-		});
-	}, [clientName, clientEmail, update]);
-
-	const handleSubmit = async (event: React.FormEvent) => {
-		event.preventDefault();
-
-		if (!isReady) {
-			return;
-		}
+	const handleFinalize = async () => {
+		if (!isReady) return;
 
 		setIsProcessing(true);
 		setErrorMessage(null);
 
 		try {
-			const { error: submitError } = await submit();
-
-			if (submitError) {
-				setErrorMessage(submitError.message || "Validation failed");
-				setIsProcessing(false);
-				return;
-			}
-
-			const result: PaymentResult = await confirmPayment({
-				intentToken: "pi_xxx_intent_token_xxx",
-				returnUrl: window.location.href,
+			// 1. Crie o pedido no seu backend (Draft) para obter o orderId
+			const response = await fetch("http://localhost:3000/api/v1/orders", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					payment: {
+						paymentMethod: "Draft",
+						availablePaymentMethods: ["CreditCard", "Pix", "BankSlip"],
+					},
+				}),
 			});
+			const { id: orderId } = await response.json();
 
-			console.log("Payment result:", result);
+			// 2. Confirme o pagamento com o orderId
+			const result: PaymentResult = await confirmPayment({ orderId });
+			console.log("Resultado do pagamento:", result);
 
 			if (result.status === "succeeded") {
-				alert("Payment successful!");
+				alert("Pagamento realizado com sucesso!");
 			}
 		} catch (err: any) {
-			setErrorMessage(err.message || "Payment failed");
+			setErrorMessage(err.message || "Falha no pagamento");
 		} finally {
 			setIsProcessing(false);
 		}
 	};
 
-	return (
-		<form onSubmit={handleSubmit}>
-			<div style={{ marginBottom: "16px" }}>
-				<label htmlFor="name" style={{ display: "block", marginBottom: "8px" }}>
-					Nome completo
-				</label>
-				<input
-					id="name"
-					onInput={(e) => setClientName(e.currentTarget.value)}
-					placeholder="João Silva"
-					style={{
-						width: "100%",
-						padding: "12px",
-						border: "1px solid #e6ebf1",
-						borderRadius: "4px",
-					}}
-					type="text"
-					value={clientName}
-				/>
-			</div>
+	const selectedMethod = getSelectedPaymentMethod();
 
-			<div style={{ marginBottom: "16px" }}>
-				<label htmlFor="email" style={{ display: "block", marginBottom: "8px" }}>
-					Email
-				</label>
-				<input
-					id="email"
-					onInput={(e) => setClientEmail(e.currentTarget.value)}
-					placeholder="joao@exemplo.com"
-					style={{
-						width: "100%",
-						padding: "12px",
-						border: "1px solid #e6ebf1",
-						borderRadius: "4px",
-					}}
-					type="email"
-					value={clientEmail}
-				/>
-			</div>
+	return (
+		<div>
+			<PayConductorCheckoutElement height="500px" />
+
+			{selectedMethod && (
+				<p style={{ margin: "12px 0", color: "#64748b" }}>
+					Método selecionado: <strong>{selectedMethod}</strong>
+				</p>
+			)}
 
 			<button
 				disabled={!isReady || isProcessing}
+				onClick={handleFinalize}
 				style={{
 					width: "100%",
 					padding: "16px",
@@ -112,10 +74,11 @@ function CheckoutForm() {
 					cursor: isReady ? "pointer" : "not-allowed",
 					fontSize: "16px",
 					fontWeight: 600,
+					marginTop: "16px",
 				}}
-				type="submit"
+				type="button"
 			>
-				{isProcessing ? "Processando..." : "Pagar agora"}
+				{isProcessing ? "Processando..." : "Finalizar compra"}
 			</button>
 
 			{errorMessage && (
@@ -125,17 +88,13 @@ function CheckoutForm() {
 			{error && (
 				<div style={{ color: "#fa755a", marginTop: "16px" }}>Erro: {error}</div>
 			)}
-		</form>
+		</div>
 	);
 }
 
 export default function App() {
-	const handleReady = () => {
-		console.log("PayConductor pronto");
-	};
-
-	const handleError = (err: Error) => {
-		console.error("Erro:", err);
+	const handlePaymentMethodSelected = (method: PaymentMethod) => {
+		console.log("Método de pagamento selecionado:", method);
 	};
 
 	const handlePaymentComplete = (result: PaymentResult) => {
@@ -143,18 +102,17 @@ export default function App() {
 	};
 
 	return (
-		<div style={{ maxWidth: "500px", margin: "0 auto", padding: "24px" }}>
+		<div style={{ maxWidth: "560px", margin: "0 auto", padding: "24px" }}>
 			<h1>PayConductor Checkout</h1>
 
 			<PayConductor
-				height="500px"
-				intentToken="pi_test_abc123"
-				locale="pt-BR"
-				onError={handleError}
-				onPaymentComplete={handlePaymentComplete}
-				onReady={handleReady}
-				publicKey="pk_test_123"
 				debug={true}
+				locale="pt-BR"
+				onError={(err) => console.error("Erro:", err)}
+				onPaymentComplete={handlePaymentComplete}
+				onPaymentMethodSelected={handlePaymentMethodSelected}
+				onReady={() => console.log("PayConductor pronto")}
+				publicKey="pk_test_123"
 				theme={{
 					primaryColor: "#0066ff",
 					fontFamily: "Roboto, sans-serif",

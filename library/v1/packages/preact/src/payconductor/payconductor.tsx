@@ -3,7 +3,7 @@ import { h, Fragment } from "preact";
 import { useState, useEffect } from "preact/hooks";
 
 export interface PayConductorEmbedProps
-  extends Omit<PayConductorConfig, "intentToken"> {
+  extends Omit<PayConductorConfig, "orderId"> {
   children?: any;
   showActionButtons?: boolean;
   debug?: boolean;
@@ -106,9 +106,9 @@ function PayConductor(props: PayConductorEmbedProps) {
       defaultPaymentMethod: props.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      confirmPayment: (options: { intentToken: string }) => {
+      confirmPayment: (options: { orderId: string }) => {
         log("confirmPayment called", {
-          intentToken: options.intentToken,
+          orderId: options.orderId,
         });
         return confirmPayment(getIframe(), pendingMap, options);
       },

@@ -91,7 +91,7 @@ function createPaymentMethod(iframe, pendingMap, options) {
 }
 function confirmPayment(iframe, pendingMap, options) {
   return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.CONFIRM_PAYMENT, {
-    intentToken: options.intentToken,
+    orderId: options.orderId,
     returnUrl: options.returnUrl
   });
 }
@@ -163,7 +163,7 @@ const PayConductor = /* @__PURE__ */ qwik.componentQrl(/* @__PURE__ */ qwik.inli
     };
     const config = {
       publicKey: props2.publicKey,
-      intentToken: props2.intentToken,
+      orderId: props2.orderId,
       theme: props2.theme,
       locale: props2.locale,
       paymentMethods: props2.paymentMethods
@@ -183,7 +183,7 @@ const PayConductor = /* @__PURE__ */ qwik.componentQrl(/* @__PURE__ */ qwik.inli
       if (!state2.configSent && iframeRef2.value) {
         state2.configSent = true;
         sendConfig(iframeRef2.value, state2.pendingMap, {
-          intentToken: props2.intentToken,
+          orderId: props2.orderId,
           theme: props2.theme,
           locale: props2.locale,
           paymentMethods: props2.paymentMethods
@@ -234,7 +234,7 @@ function usePayConductor() {
   const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const config = ctx?.config ? {
     publicKey: ctx.config.publicKey,
-    intentToken: ctx.config.intentToken,
+    orderId: ctx.config.orderId,
     theme: ctx.config.theme,
     locale: ctx.config.locale
   } : {};
@@ -285,7 +285,7 @@ function useElement() {
       updateConfig: () => {
         throw new Error("PayConductor not initialized");
       },
-      updateIntentToken: () => {
+      updateorderId: () => {
         throw new Error("PayConductor not initialized");
       },
       update: () => {
@@ -300,10 +300,10 @@ function useElement() {
     confirmPayment: async (options) => {
       const iframe = getIframe();
       const pendingMap = createPendingRequestsMap();
-      if (!options.intentToken)
-        throw new Error("Intent token is required");
+      if (!options.orderId)
+        throw new Error("Order ID is required");
       return sendMessageToIframe(iframe || void 0, pendingMap, MESSAGE_TYPES.CONFIRM_PAYMENT, {
-        intentToken: options.intentToken,
+        orderId: options.orderId,
         returnUrl: options.returnUrl
       });
     },
@@ -313,17 +313,17 @@ function useElement() {
       const currentConfig = ctx.config;
       sendToIframe(MESSAGE_TYPES.CONFIG, {
         publicKey: currentConfig?.publicKey,
-        intentToken: currentConfig?.intentToken,
+        orderId: currentConfig?.orderId,
         theme: config.theme ?? currentConfig?.theme,
         locale: config.locale ?? currentConfig?.locale,
         paymentMethods: config.paymentMethods ?? currentConfig?.paymentMethods
       });
     },
-    updateIntentToken: (intentToken) => {
+    updateorderId: (orderId) => {
       const currentConfig = ctx.config;
       sendToIframe(MESSAGE_TYPES.CONFIG, {
         publicKey: currentConfig?.publicKey,
-        intentToken,
+        orderId,
         theme: currentConfig?.theme,
         locale: currentConfig?.locale,
         paymentMethods: currentConfig?.paymentMethods

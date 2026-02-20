@@ -10,7 +10,7 @@ export type SubmitResult = {
   paymentMethod?: PaymentMethod;
 };
 export type ConfirmPaymentOptions = {
-  intentToken: string;
+  orderId: string;
   returnUrl?: string;
 };
 export type UpdateOptions = {
@@ -24,7 +24,7 @@ export interface UsePayconductorElementReturn {
   reset: () => Promise<void>;
   getSelectedPaymentMethod: () => PaymentMethod | null;
   updateConfig: (config: Partial<Pick<PayConductorConfig, "theme" | "locale" | "paymentMethods">>) => void;
-  updateIntentToken: (intentToken: string) => void;
+  updateorderId: (orderId: string) => void;
   update: (options: UpdateOptions) => void;
   submit: () => Promise<SubmitResult>;
 }
@@ -72,7 +72,7 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
       updateConfig: () => {
         throw new Error("PayConductor not initialized");
       },
-      updateIntentToken: () => {
+      updateorderId: () => {
         throw new Error("PayConductor not initialized");
       },
       update: () => {
@@ -92,8 +92,8 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
     confirmPayment: async (options: ConfirmPaymentOptions): Promise<PaymentResult> => {
       const iframe = getIframeFromContext(ctx);
       const pendingMap = createPendingRequestsMap();
-      if (!options.intentToken) {
-        throw new Error("Intent token is required");
+      if (!options.orderId) {
+        throw new Error("Order ID is required");
       }
       return confirmPayment(iframe || undefined, pendingMap, options);
     },
@@ -106,17 +106,17 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
       const currentConfig = ctx.config;
       sendToIframe(POST_MESSAGES.CONFIG, {
         publicKey: currentConfig?.publicKey,
-        intentToken: currentConfig?.intentToken,
+        orderId: currentConfig?.orderId,
         theme: config.theme ?? currentConfig?.theme,
         locale: config.locale ?? currentConfig?.locale,
         paymentMethods: config.paymentMethods ?? currentConfig?.paymentMethods
       });
     },
-    updateIntentToken: (intentToken: string) => {
+    updateorderId: (orderId: string) => {
       const currentConfig = ctx.config;
       sendToIframe(POST_MESSAGES.CONFIG, {
         publicKey: currentConfig?.publicKey,
-        intentToken: intentToken,
+        orderId: orderId,
         theme: currentConfig?.theme,
         locale: currentConfig?.locale,
         paymentMethods: currentConfig?.paymentMethods

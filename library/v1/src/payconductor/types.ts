@@ -14,7 +14,7 @@ export type {
 } from "./iframe/types";
 
 export type ConfirmPaymentOptions = {
-	intentToken: string;
+	orderId: string;
 	returnUrl?: string;
 };
 

@@ -16,7 +16,7 @@ import type {
 } from "./types";
 import { buildIframeUrl } from "./utils";
 
-export interface PayConductorEmbedProps extends Omit<PayConductorConfig, "intentToken"> {
+export interface PayConductorEmbedProps extends Omit<PayConductorConfig, "orderId"> {
 	children?: any;
 	showActionButtons?: boolean;
 	debug?: boolean;
@@ -90,8 +90,8 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		};
 
 		const api: PayConductorApi = {
-			confirmPayment: (options: { intentToken: string }) => {
-				log("confirmPayment called", { intentToken: options.intentToken });
+			confirmPayment: (options: { orderId: string }) => {
+				log("confirmPayment called", { orderId: options.orderId });
 				return confirmPayment(getIframe(), state.pendingMap, options);
 			},
 			validate: (data: unknown) => {

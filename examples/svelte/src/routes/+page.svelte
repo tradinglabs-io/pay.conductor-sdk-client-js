@@ -1,114 +1,96 @@
 <script lang="ts">
-  import { PayConductor, useElement, usePayConductor, type PaymentResult } from '@payconductor-sdk-client-js/library-svelte';
+  import {
+    PayConductor,
+    PayConductorCheckoutElement,
+    usePayConductor,
+    usePayconductorElement,
+    type PaymentMethod,
+    type PaymentResult,
+  } from '@payconductor-sdk-web/library-svelte';
 
   const { isReady, error } = usePayConductor();
-  const { submit, confirmPayment, update } = useElement();
+  const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-  let errorMessage = null;
+  let errorMessage: string | null = null;
   let isProcessing = false;
-  let clientName = '';
-  let clientEmail = '';
 
-  $: update({ billingDetails: { name: clientName, email: clientEmail } });
+  $: selectedMethod = getSelectedPaymentMethod();
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-
-    if (!$isReady) {
-      return;
-    }
+  async function handleFinalize() {
+    if (!$isReady) return;
 
     isProcessing = true;
     errorMessage = null;
 
     try {
-      const { error: submitError } = await submit();
-
-      if (submitError) {
-        errorMessage = submitError.message || 'Validation failed';
-        isProcessing = false;
-        return;
-      }
-
-      const result: PaymentResult = await confirmPayment({
-        intentToken: 'pi_xxx_intent_token_xxx',
-        returnUrl: window.location.href,
+      // 1. Crie o pedido no seu backend (Draft) para obter o orderId
+      const response = await fetch('http://localhost:3000/api/v1/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment: {
+            paymentMethod: 'Draft',
+            availablePaymentMethods: ['CreditCard', 'Pix', 'BankSlip'],
+          },
+        }),
       });
+      const { id: orderId } = await response.json();
 
-      console.log('Payment result:', result);
+      // 2. Confirme o pagamento com o orderId
+      const result: PaymentResult = await confirmPayment({ orderId });
+      console.log('Resultado do pagamento:', result);
 
       if (result.status === 'succeeded') {
-        alert('Payment successful!');
+        alert('Pagamento realizado com sucesso!');
       }
-    } catch (err) {
-      errorMessage = err.message || 'Payment failed';
+    } catch (err: any) {
+      errorMessage = err.message || 'Falha no pagamento';
     } finally {
       isProcessing = false;
     }
   }
 
-  function handleReady() {
-    console.log('PayConductor is ready');
+  function handlePaymentMethodSelected(method: PaymentMethod) {
+    console.log('Método de pagamento selecionado:', method);
   }
 
-  function handleError(err) {
-    console.error('Error:', err);
-  }
-
-  function handlePaymentComplete(result) {
-    console.log('Payment completed:', result);
-    alert('Payment successful!');
+  function handlePaymentComplete(result: PaymentResult) {
+    console.log('Pagamento completo:', result);
   }
 </script>
 
-<h1>PayConductor Checkout</h1>
+<div style="max-width: 560px; margin: 0 auto; padding: 24px">
+  <h1>PayConductor Checkout</h1>
 
-<PayConductor
-  publicKey="pk_test_123"
-  intentToken="pi_test_abc123"
-  theme={{ 
-    primaryColor: '#0066ff',
-    fontFamily: 'Roboto, sans-serif',
-    borderRadius: '8px'
-  }}
-  locale="pt-BR"
-  height="500px"
-  debug={true}
-  onReady={handleReady}
-  onError={handleError}
-  onPaymentComplete={handlePaymentComplete}
->
-  <form on:submit={handleSubmit}>
-    <div style="margin-bottom: 16px">
-      <label style="display: block; margin-bottom: 8px">
-        Nome completo
-      </label>
-      <input 
-        type="text" 
-        placeholder="João Silva"
-        bind:value={clientName}
-        style="width: 100%; padding: 12px; border: 1px solid #e6ebf1; border-radius: 4px"
-      />
-    </div>
-    
-    <div style="margin-bottom: 16px">
-      <label style="display: block; margin-bottom: 8px">
-        Email
-      </label>
-      <input 
-        type="email" 
-        placeholder="joao@exemplo.com"
-        bind:value={clientEmail}
-        style="width: 100%; padding: 12px; border: 1px solid #e6ebf1; border-radius: 4px"
-      />
-    </div>
-    
-    <button 
-      type="submit" 
+  <PayConductor
+    publicKey="pk_test_123"
+    locale="pt-BR"
+    debug={true}
+    theme={{
+      primaryColor: '#0066ff',
+      fontFamily: 'Roboto, sans-serif',
+      borderRadius: '8px',
+    }}
+    onReady={() => console.log('PayConductor pronto')}
+    onError={(err) => console.error('Erro:', err)}
+    onPaymentComplete={handlePaymentComplete}
+    onPaymentMethodSelected={handlePaymentMethodSelected}
+  >
+    <PayConductorCheckoutElement height="500px" />
+
+    {#if selectedMethod}
+      <p style="margin: 12px 0; color: #64748b">
+        Método selecionado: <strong>{selectedMethod}</strong>
+      </p>
+    {/if}
+
+    <button
+      type="button"
       disabled={!$isReady || isProcessing}
-      style="width: 100%; padding: 16px; background-color: {$isReady ? '#0066ff' : '#cfd7df'}; color: #ffffff; border: none; border-radius: 4px; cursor: {$isReady ? 'pointer' : 'not-allowed'}; font-size: 16px; font-weight: 600"
+      on:click={handleFinalize}
+      style="width: 100%; padding: 16px; background-color: {$isReady ? '#0066ff' : '#cfd7df'}; color: #ffffff; border: none; border-radius: 8px; cursor: {$isReady ? 'pointer' : 'not-allowed'}; font-size: 16px; font-weight: 600; margin-top: 16px"
     >
-      {isProcessing ? 'Processando...' : 'Pagar agora'}
+      {isProcessing ? 'Processando...' : 'Finalizar compra'}
     </button>
 
     {#if errorMessage}
@@ -122,5 +104,5 @@
         Erro: {$error}
       </div>
     {/if}
-  </form>
-</PayConductor>
+  </PayConductor>
+</div>
