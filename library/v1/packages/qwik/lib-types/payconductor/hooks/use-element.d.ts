@@ -1,4 +1,4 @@
-import type { BillingDetails, PayConductorApi, PayConductorConfig, PaymentMethod, PaymentResult } from "../types";
+import type { BillingDetails, PayConductorConfig, PaymentMethod, PaymentResult } from "../iframe/types";
 export type SubmitResult = {
     error?: {
         message: string;
@@ -15,11 +15,14 @@ export type UpdateOptions = {
     billingDetails?: Partial<BillingDetails>;
     address?: Partial<BillingDetails["address"]>;
 };
-export interface UseElementReturn extends PayConductorApi {
+export interface UseElementReturn {
+    confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
+    validate: (data: unknown) => Promise<boolean>;
+    reset: () => Promise<void>;
+    getSelectedPaymentMethod: () => PaymentMethod | null;
     updateConfig: (config: Partial<Pick<PayConductorConfig, "theme" | "locale" | "paymentMethods">>) => void;
     updateIntentToken: (intentToken: string) => void;
     update: (options: UpdateOptions) => void;
     submit: () => Promise<SubmitResult>;
-    confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
 }
 export declare function useElement(): UseElementReturn;

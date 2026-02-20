@@ -1,8 +1,8 @@
 # @payconductor-sdk-web/library-react
 
-React SDK para integração com o PayConductor Payment Gateway.
+React SDK for integrating with PayConductor Payment Gateway.
 
-## Instalação
+## Installation
 
 ```bash
 npm install @payconductor-sdk-web/library-react
@@ -12,7 +12,7 @@ yarn add @payconductor-sdk-web/library-react
 pnpm add @payconductor-sdk-web/library-react
 ```
 
-## Uso Básico
+## Basic Usage
 
 ```tsx
 "use client";
@@ -79,7 +79,7 @@ function CheckoutForm() {
     <form onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Nome completo"
+        placeholder="Full name"
         value={clientName}
         onChange={(e) => setClientName(e.target.value)}
       />
@@ -90,10 +90,10 @@ function CheckoutForm() {
         onChange={(e) => setClientEmail(e.target.value)}
       />
       <button type="submit" disabled={!isReady || isProcessing}>
-        {isProcessing ? "Processando..." : "Pagar agora"}
+        {isProcessing ? "Processing..." : "Pay now"}
       </button>
       {errorMessage && <div>{errorMessage}</div>}
-      {error && <div>Erro: {error}</div>}
+      {error && <div>Error: {error}</div>}
     </form>
   );
 }
@@ -104,7 +104,7 @@ export default function App() {
       publicKey="pk_test_123"
       intentToken="pi_test_abc123"
       theme={{ primaryColor: "#0066ff" }}
-      locale="pt-BR"
+      locale="en-US"
       height="500px"
       onReady={() => console.log("Ready")}
       onError={(err) => console.error(err)}
@@ -120,39 +120,39 @@ export default function App() {
 
 ### `<PayConductor />`
 
-Componente principal que inicializa o iframe de pagamento.
+Main component that initializes the payment iframe.
 
-| Prop | Tipo | Descrição |
-|------|------|-----------|
-| `publicKey` | `string` | Chave pública do PayConductor |
-| `intentToken` | `string` | Token do payment intent |
-| `theme` | `PayConductorTheme` | Configuração de tema |
-| `locale` | `string` | Idioma (ex: 'pt-BR', 'en-US') |
-| `height` | `string` | Altura do iframe (default: '500px') |
-| `onReady` | `() => void` | Callback quando iframe está pronto |
-| `onError` | `(error: Error) => void` | Callback de erro |
-| `onPaymentComplete` | `(result: PaymentResult) => void` | Callback de pagamento completo |
+| Prop | Type | Description |
+|------|------|-------------|
+| `publicKey` | `string` | Your PayConductor public key |
+| `intentToken` | `string` | Payment intent token |
+| `theme` | `PayConductorTheme` | Theme configuration |
+| `locale` | `string` | Locale (e.g., 'en-US', 'pt-BR') |
+| `height` | `string` | Iframe height (default: '500px') |
+| `onReady` | `() => void` | Callback when iframe is ready |
+| `onError` | `(error: Error) => void` | Error callback |
+| `onPaymentComplete` | `(result: PaymentResult) => void` | Payment complete callback |
 
 ### `usePayConductor()`
 
-Hook que retorna o estado do frame e configuração.
+Hook that returns frame state and configuration.
 
 ```tsx
 const { isReady, error, publicKey, intentToken, theme, locale } = usePayConductor();
 ```
 
-| Propriedade | Tipo | Descrição |
-|-------------|------|-----------|
-| `isReady` | `boolean` | Se o iframe está pronto |
-| `error` | `string \| null` | Mensagem de erro, se houver |
-| `publicKey` | `string` | Chave pública da configuração |
-| `intentToken` | `string` | Token do intent da configuração |
-| `theme` | `PayConductorTheme` | Tema da configuração |
-| `locale` | `string` | Locale da configuração |
+| Property | Type | Description |
+|----------|------|-------------|
+| `isReady` | `boolean` | Whether iframe is ready |
+| `error` | `string \| null` | Error message if any |
+| `publicKey` | `string` | Public key from config |
+| `intentToken` | `string` | Intent token from config |
+| `theme` | `PayConductorTheme` | Theme from config |
+| `locale` | `string` | Locale from config |
 
 ### `useElement()`
 
-Hook que fornece os métodos de pagamento.
+Hook that provides payment methods.
 
 ```tsx
 const {
@@ -166,15 +166,15 @@ const {
 } = useElement();
 ```
 
-| Método | Descrição |
-|--------|-----------|
-| `submit()` | Submete o formulário, retorna `{ error?, paymentMethod? }` |
-| `confirmPayment(options)` | Confirma o pagamento com `{ intentToken, returnUrl? }` |
-| `update(options)` | Atualiza billing details `{ billingDetails?: { name, email, phone, address } }` |
-| `validate(data)` | Valida dados do pagamento |
-| `reset()` | Reseta o formulário de pagamento |
-| `updateConfig(config)` | Atualiza config de theme, locale ou paymentMethods |
-| `updateIntentToken(token)` | Atualiza o intent token |
+| Method | Description |
+|--------|-------------|
+| `submit()` | Submits the form, returns `{ error?, paymentMethod? }` |
+| `confirmPayment(options)` | Confirms payment with `{ intentToken, returnUrl? }` |
+| `update(options)` | Updates billing details `{ billingDetails?: { name, email, phone, address } }` |
+| `validate(data)` | Validates payment data |
+| `reset()` | Resets the payment form |
+| `updateConfig(config)` | Updates theme, locale, or paymentMethods config |
+| `updateIntentToken(token)` | Updates the intent token |
 
 ## Theming
 
@@ -211,7 +211,7 @@ const theme: PayConductorTheme = {
 };
 ```
 
-## Tipos
+## Types
 
 ```tsx
 type PaymentResult = {
