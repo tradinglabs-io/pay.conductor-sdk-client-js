@@ -16,7 +16,7 @@
         :src="iframeUrl"
         :style="{
           width: '100%',
-          height: height || IFRAME_DEFAULT_HEIGHT,
+          height: height || IFRAME_DEFAULT_HEIGHT_VALUE,
           border: 'none',
         }"
       ></iframe>
@@ -27,34 +27,38 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 
-import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
+import type {
+  PayConductorConfig,
+  PaymentMethod,
+  PaymentResult,
+} from "./iframe/types";
 import {
   confirmPayment,
-  createPaymentMethod,
   createPendingRequestsMap,
   handleMessageEvent,
-  PendingRequest,
   resetPayment,
   sendConfig,
   validatePayment,
 } from "./internal";
 import type {
-  ConfirmPaymentOptions,
-  CreatePaymentMethodOptions,
   PayConductorApi,
-  PayConductorConfig,
   PayConductorFrame,
   PayConductorState,
-  PaymentResult,
+  PendingRequest,
 } from "./types";
 import { buildIframeUrl } from "./utils";
 
 export interface PayConductorEmbedProps extends PayConductorConfig {
   height?: string;
   children?: any;
+  showActionButtons?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
+  onPaymentFailed?: (result: PaymentResult) => void;
+  onPaymentPending?: (result: PaymentResult) => void;
+  onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 
 export default defineComponent({
@@ -66,9 +70,14 @@ export default defineComponent({
     "theme",
     "locale",
     "paymentMethods",
+    "defaultPaymentMethod",
+    "showPaymentButtons",
     "onReady",
     "onError",
     "onPaymentComplete",
+    "onPaymentFailed",
+    "onPaymentPending",
+    "onPaymentMethodSelected",
     "height",
   ],
 
@@ -79,8 +88,9 @@ export default defineComponent({
       error: null,
       iframeUrl: "",
       pendingMap: null,
+      selectedPaymentMethod: null,
       configSent: false,
-      IFRAME_DEFAULT_HEIGHT,
+      IFRAME_DEFAULT_HEIGHT_VALUE,
     };
   },
 
@@ -105,20 +115,21 @@ export default defineComponent({
       theme: this.theme,
       locale: this.locale,
       paymentMethods: this.paymentMethods,
+      defaultPaymentMethod: this.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      createPaymentMethod: (options: CreatePaymentMethodOptions) =>
-        createPaymentMethod(this.$refs.iframeRef, this.pendingMap, options),
-      confirmPayment: (options: ConfirmPaymentOptions) =>
+      confirmPayment: (options: { intentToken: string }) =>
         confirmPayment(this.$refs.iframeRef, this.pendingMap, options),
-      validate: (data: any) =>
+      validate: (data: unknown) =>
         validatePayment(this.$refs.iframeRef, this.pendingMap, data),
       reset: () => resetPayment(this.$refs.iframeRef, this.pendingMap),
+      getSelectedPaymentMethod: () => this.selectedPaymentMethod,
     };
     window.PayConductor = {
       frame,
       config,
       api,
+      selectedPaymentMethod: this.selectedPaymentMethod,
     };
     const sendConfigToIframe = async () => {
       if (!this.configSent && this.$refs.iframeRef) {
@@ -128,6 +139,8 @@ export default defineComponent({
           theme: this.theme,
           locale: this.locale,
           paymentMethods: this.paymentMethods,
+          defaultPaymentMethod: this.defaultPaymentMethod,
+          showPaymentButtons: this.showPaymentButtons,
         });
       }
     };
@@ -146,7 +159,16 @@ export default defineComponent({
         },
         this.onReady,
         this.onError,
-        this.onPaymentComplete
+        (data) => this.onPaymentComplete?.(data as PaymentResult),
+        (data) => this.onPaymentFailed?.(data as PaymentResult),
+        (data) => this.onPaymentPending?.(data as PaymentResult),
+        (method) => {
+          this.selectedPaymentMethod = method;
+          if (window.PayConductor) {
+            window.PayConductor.selectedPaymentMethod = method;
+          }
+          this.onPaymentMethodSelected?.(method);
+        }
       );
     };
     window.addEventListener("message", eventHandler);

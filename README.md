@@ -29,25 +29,43 @@ bun add @payconductor-sdk-client-js
 ### React
 
 ```tsx
-import { PayConductor, usePayment, useFrame } from '@payconductor-sdk-client-js/library-react';
+import { PayConductor, useElement, usePayConductor, type PaymentResult } from '@payconductor-sdk-client-js/library-react';
+import { useState, useEffect } from 'react';
 
 function Checkout() {
-  const { isReady } = useFrame();
-  const { createPaymentMethod, confirmPayment } = usePayment();
+  const { isReady, error } = usePayConductor();
+  const { submit, confirmPayment, update } = useElement();
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+
+  useEffect(() => {
+    update({ billingDetails: { name: clientName, email: clientEmail } });
+  }, [clientName, clientEmail, update]);
 
   const handlePay = async () => {
-    const { id } = await createPaymentMethod({ billingDetails: { name: 'John Doe' } });
-    await confirmPayment(id);
+    const { error: submitError } = await submit();
+    if (submitError) {
+      console.error(submitError.message);
+      return;
+    }
+    const result: PaymentResult = await confirmPayment({
+      intentToken: 'pi_xxx_intent_token_xxx',
+      returnUrl: window.location.href,
+    });
+    console.log(result);
   };
 
   return (
     <PayConductor
-      clientId="client_123"
-      token="ord_abc123token"
+      publicKey="pk_test_123"
+      intentToken="pi_test_abc123"
       theme={{ primaryColor: '#0066ff' }}
+      locale="pt-BR"
       onReady={() => console.log('Ready')}
       onPaymentComplete={(result) => console.log(result)}
     >
+      <input placeholder="Name" value={clientName} onInput={(e) => setClientName(e.currentTarget.value)} />
+      <input placeholder="Email" value={clientEmail} onInput={(e) => setClientEmail(e.currentTarget.value)} />
       <button onClick={handlePay} disabled={!isReady}>Pay</button>
     </PayConductor>
   );
@@ -59,24 +77,36 @@ function Checkout() {
 ```vue
 <template>
   <PayConductor
-    client-id="client_123"
-    token="ord_abc123token"
+    public-key="pk_test_123"
+    intent-token="pi_test_abc123"
     :theme="{ primaryColor: '#0066ff' }"
+    locale="pt-BR"
     @payment-complete="onPaymentComplete"
   >
+    <input v-model="clientName" placeholder="Name" />
+    <input v-model="clientEmail" placeholder="Email" />
     <button @click="handlePay" :disabled="!isReady">Pay</button>
   </PayConductor>
 </template>
 
 <script setup>
-import { PayConductor, usePayment, useFrame } from '@payconductor-sdk-client-js/library-vue';
+import { ref, watch } from 'vue';
+import { PayConductor, useElement, usePayConductor } from '@payconductor-sdk-client-js/library-vue';
 
-const { isReady } = useFrame();
-const { createPaymentMethod, confirmPayment } = usePayment();
+const { isReady } = usePayConductor();
+const { submit, confirmPayment, update } = useElement();
+const clientName = ref('');
+const clientEmail = ref('');
+
+watch([clientName, clientEmail], () => {
+  update({ billingDetails: { name: clientName.value, email: clientEmail.value } });
+});
 
 const handlePay = async () => {
-  const { id } = await createPaymentMethod({ billingDetails: { name: 'John Doe' } });
-  await confirmPayment(id);
+  const { error: submitError } = await submit();
+  if (submitError) return;
+  const result = await confirmPayment({ intentToken: 'pi_xxx_intent_token_xxx', returnUrl: window.location.href });
+  console.log(result);
 };
 
 const onPaymentComplete = (result) => console.log(result);
@@ -87,23 +117,33 @@ const onPaymentComplete = (result) => console.log(result);
 
 ```svelte
 <script>
-  import { PayConductor, usePayment, useFrame } from '@payconductor-sdk-client-js/library-svelte';
+  import { PayConductor, useElement, usePayConductor } from '@payconductor-sdk-client-js/library-svelte';
 
-  const { isReady } = useFrame();
-  const { createPaymentMethod, confirmPayment } = usePayment();
+  const { isReady, error } = usePayConductor();
+  const { submit, confirmPayment, update } = useElement();
+
+  let clientName = '';
+  let clientEmail = '';
+
+  $: update({ billingDetails: { name: clientName, email: clientEmail } });
 
   const handlePay = async () => {
-    const { id } = await createPaymentMethod({ billingDetails: { name: 'John Doe' } });
-    await confirmPayment(id);
+    const { error: submitError } = await submit();
+    if (submitError) return;
+    const result = await confirmPayment({ intentToken: 'pi_xxx_intent_token_xxx', returnUrl: window.location.href });
+    console.log(result);
   };
 </script>
 
 <PayConductor
-  clientId="client_123"
-  token="ord_abc123token"
+  publicKey="pk_test_123"
+  intentToken="pi_test_abc123"
   theme={{ primaryColor: '#0066ff' }}
+  locale="pt-BR"
   onPaymentComplete={(result) => console.log(result)}
 >
+  <input bind:value={clientName} placeholder="Name" />
+  <input bind:value={clientEmail} placeholder="Email" />
   <button on:click={handlePay} disabled={!$isReady}>Pay</button>
 </PayConductor>
 ```
@@ -116,43 +156,50 @@ Main component that initializes the payment iframe.
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `clientId` | `string` | Your PayConductor client ID |
-| `token` | `string` | Order token |
-| `theme` | `object` | Theme customization options |
+| `publicKey` | `string` | Your PayConductor public key |
+| `intentToken` | `string` | Payment intent token |
+| `theme` | `PayConductorTheme` | Theme customization options |
 | `locale` | `string` | Locale (e.g., 'en-US', 'pt-BR') |
 | `height` | `string` | Iframe height (default: '500px') |
 | `onReady` | `function` | Called when iframe is ready |
 | `onError` | `function` | Called when an error occurs |
 | `onPaymentComplete` | `function` | Called when payment is completed |
 
-### usePayment
+### usePayConductor
 
-Hook that provides payment methods.
-
-```tsx
-const { createPaymentMethod, confirmPayment, validate, reset } = usePayment();
-```
-
-| Method | Description |
-|--------|-------------|
-| `createPaymentMethod(options)` | Creates a new payment method |
-| `confirmPayment(paymentMethodId)` | Confirms the payment |
-| `validate(data)` | Validates payment data |
-| `reset()` | Resets the payment form |
-
-### useFrame
-
-Hook that provides frame state.
+Hook that provides frame state and config.
 
 ```tsx
-const { iframe, isReady, error } = useFrame();
+const { isReady, error, publicKey, intentToken, theme, locale } = usePayConductor();
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `iframe` | `HTMLIFrameElement` | Reference to iframe element |
 | `isReady` | `boolean` | Whether frame is ready |
 | `error` | `string \| null` | Error message if any |
+| `publicKey` | `string` | Public key from config |
+| `intentToken` | `string` | Intent token from config |
+| `theme` | `PayConductorTheme` | Theme from config |
+| `locale` | `string` | Locale from config |
+
+### useElement
+
+Hook that provides payment methods.
+
+```tsx
+const { submit, confirmPayment, update, validate, reset, getSelectedPaymentMethod, updateConfig, updateIntentToken } = useElement();
+```
+
+| Method | Description |
+|--------|-------------|
+| `submit()` | Submits the payment form, returns `{ error?, paymentMethod? }` |
+| `confirmPayment(options)` | Confirms the payment with `{ intentToken, returnUrl? }` |
+| `update(options)` | Updates billing details `{ billingDetails?: { name, email, phone, address } }` |
+| `validate(data)` | Validates payment data |
+| `reset()` | Resets the payment form |
+| `getSelectedPaymentMethod()` | Returns the selected payment method |
+| `updateConfig(config)` | Updates theme, locale, or paymentMethods config |
+| `updateIntentToken(token)` | Updates the intent token |
 
 ## Theming
 
@@ -162,15 +209,32 @@ Customize the SDK appearance with the theme prop:
 const theme = {
   primaryColor: '#0066ff',
   secondaryColor: '#5a6b7c',
-  backgroundColor: '#ffffff',
-  errorColor: '#fa755a',
-  successColor: '#28a745',
-  fontFamily: 'Roboto, sans-serif',
+  backgroundColor: 'transparent',
+  surfaceColor: '#f8fafc',
+  textColor: '#0f172a',
+  textSecondaryColor: '#64748b',
+  errorColor: '#ef4444',
+  successColor: '#22c55e',
+  warningColor: '#f59e0b',
+  borderColor: '#e2e8f0',
+  disabledColor: '#cbd5e1',
+  fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem', lg: '1.125rem', xl: '1.25rem' },
+  fontWeight: { normal: 400, medium: 500, bold: 600 },
+  lineHeight: '1.5',
+  spacing: { xs: '4px', sm: '8px', md: '16px', lg: '24px', xl: '32px' },
   borderRadius: '8px',
+  borderWidth: '1px',
+  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
   inputBackground: '#ffffff',
-  inputBorderColor: '#e6ebf1',
-  buttonHeight: '44px',
-  buttonPadding: '16px'
+  inputBorderColor: '#cbd5e1',
+  inputBorderRadius: '8px',
+  inputHeight: '44px',
+  inputPadding: '12px 16px',
+  buttonHeight: '48px',
+  buttonPadding: '16px 24px',
+  buttonBorderRadius: '8px',
+  transitionDuration: '0.2s',
 };
 ```
 

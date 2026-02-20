@@ -263,3 +263,64 @@ export interface MessagePayload {
 		field?: string;
 	};
 }
+
+// ---------------------------------------------------------------------------
+// Payment Confirm Data Models (mirrors server paymentDataModel union)
+// ---------------------------------------------------------------------------
+
+export type CardTokenData = {
+	token: string;
+	firstSixCardNumber?: string;
+};
+
+export type CardFullData = {
+	number: string;
+	holderName: string;
+	cvv: string;
+	expiration: {
+		month: number;
+		year: number;
+	};
+};
+
+export type CardPaymentData = CardTokenData | CardFullData;
+
+export type PixPaymentData = {
+	paymentMethod: PaymentMethod.Pix;
+	expirationInSeconds?: number;
+};
+
+export type CreditCardPaymentData = {
+	paymentMethod: PaymentMethod.CreditCard;
+	card: CardPaymentData;
+	installments: number;
+	softDescriptor?: string;
+};
+
+export type BankSlipPaymentData = {
+	paymentMethod: PaymentMethod.BankSlip;
+	expirationInDays?: number;
+};
+
+export type NuPayData = {
+	cancelUrl: string;
+	merchantName: string;
+	returnUrl: string;
+	storeName?: string;
+};
+
+export type NuPayPaymentData = {
+	paymentMethod: PaymentMethod.NuPay;
+	nuPay: NuPayData;
+};
+
+export type PicPayPaymentData = {
+	paymentMethod: PaymentMethod.PicPay;
+};
+
+export type PaymentConfirmData =
+	| PixPaymentData
+	| CreditCardPaymentData
+	| BankSlipPaymentData
+	| NuPayPaymentData
+	| PicPayPaymentData;

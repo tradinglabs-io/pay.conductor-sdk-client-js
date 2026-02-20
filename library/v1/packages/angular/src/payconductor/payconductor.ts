@@ -6,30 +6,34 @@ import { Component, ViewChild, ElementRef, Input } from "@angular/core";
 export interface PayConductorEmbedProps extends PayConductorConfig {
   height?: string;
   children?: any;
+  showActionButtons?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
+  onPaymentFailed?: (result: PaymentResult) => void;
+  onPaymentPending?: (result: PaymentResult) => void;
+  onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 
-import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
+import type {
+  PayConductorConfig,
+  PaymentMethod,
+  PaymentResult,
+} from "./iframe/types";
 import {
   confirmPayment,
-  createPaymentMethod,
   createPendingRequestsMap,
   handleMessageEvent,
-  PendingRequest,
   resetPayment,
   sendConfig,
   validatePayment,
 } from "./internal";
 import type {
-  ConfirmPaymentOptions,
-  CreatePaymentMethodOptions,
   PayConductorApi,
-  PayConductorConfig,
   PayConductorFrame,
   PayConductorState,
-  PaymentResult,
+  PendingRequest,
 } from "./types";
 import { buildIframeUrl } from "./utils";
 
@@ -53,7 +57,7 @@ import { buildIframeUrl } from "./utils";
           [attr.src]="iframeUrl"
           [ngStyle]='{
           width: "100%",
-          height: height || IFRAME_DEFAULT_HEIGHT,
+          height: height || IFRAME_DEFAULT_HEIGHT_VALUE,
           border: "none"
         }'
         ></iframe
@@ -69,16 +73,23 @@ import { buildIframeUrl } from "./utils";
   ],
 })
 export default class PayConductor {
-  IFRAME_DEFAULT_HEIGHT = IFRAME_DEFAULT_HEIGHT;
+  IFRAME_DEFAULT_HEIGHT_VALUE = IFRAME_DEFAULT_HEIGHT_VALUE;
 
   @Input() publicKey!: PayConductorEmbedProps["publicKey"];
   @Input() intentToken!: PayConductorEmbedProps["intentToken"];
   @Input() theme!: PayConductorEmbedProps["theme"];
   @Input() locale!: PayConductorEmbedProps["locale"];
   @Input() paymentMethods!: PayConductorEmbedProps["paymentMethods"];
+  @Input()
+  defaultPaymentMethod!: PayConductorEmbedProps["defaultPaymentMethod"];
+  @Input() showPaymentButtons!: PayConductorEmbedProps["showPaymentButtons"];
   @Input() onReady!: PayConductorEmbedProps["onReady"];
   @Input() onError!: PayConductorEmbedProps["onError"];
   @Input() onPaymentComplete!: PayConductorEmbedProps["onPaymentComplete"];
+  @Input() onPaymentFailed!: PayConductorEmbedProps["onPaymentFailed"];
+  @Input() onPaymentPending!: PayConductorEmbedProps["onPaymentPending"];
+  @Input()
+  onPaymentMethodSelected!: PayConductorEmbedProps["onPaymentMethodSelected"];
   @Input() height!: PayConductorEmbedProps["height"];
 
   @ViewChild("iframeRef") iframeRef!: ElementRef;
@@ -88,6 +99,7 @@ export default class PayConductor {
   error: PayConductorState["error"] = null;
   iframeUrl: PayConductorState["iframeUrl"] = "";
   pendingMap: PayConductorState["pendingMap"] = null;
+  selectedPaymentMethod: PayConductorState["selectedPaymentMethod"] = null;
   configSent = false;
 
   ngOnInit() {
@@ -112,29 +124,26 @@ export default class PayConductor {
         theme: this.theme,
         locale: this.locale,
         paymentMethods: this.paymentMethods,
+        defaultPaymentMethod: this.defaultPaymentMethod,
       };
       const api: PayConductorApi = {
-        createPaymentMethod: (options: CreatePaymentMethodOptions) =>
-          createPaymentMethod(
-            this.iframeRef?.nativeElement,
-            this.pendingMap,
-            options
-          ),
-        confirmPayment: (options: ConfirmPaymentOptions) =>
+        confirmPayment: (options: { intentToken: string }) =>
           confirmPayment(
             this.iframeRef?.nativeElement,
             this.pendingMap,
             options
           ),
-        validate: (data: any) =>
+        validate: (data: unknown) =>
           validatePayment(this.iframeRef?.nativeElement, this.pendingMap, data),
         reset: () =>
           resetPayment(this.iframeRef?.nativeElement, this.pendingMap),
+        getSelectedPaymentMethod: () => this.selectedPaymentMethod,
       };
       window.PayConductor = {
         frame,
         config,
         api,
+        selectedPaymentMethod: this.selectedPaymentMethod,
       };
       const sendConfigToIframe = async () => {
         if (!this.configSent && this.iframeRef?.nativeElement) {
@@ -144,6 +153,8 @@ export default class PayConductor {
             theme: this.theme,
             locale: this.locale,
             paymentMethods: this.paymentMethods,
+            defaultPaymentMethod: this.defaultPaymentMethod,
+            showPaymentButtons: this.showPaymentButtons,
           });
         }
       };
@@ -162,7 +173,16 @@ export default class PayConductor {
           },
           this.onReady,
           this.onError,
-          this.onPaymentComplete
+          (data) => this.onPaymentComplete?.(data as PaymentResult),
+          (data) => this.onPaymentFailed?.(data as PaymentResult),
+          (data) => this.onPaymentPending?.(data as PaymentResult),
+          (method) => {
+            this.selectedPaymentMethod = method;
+            if (window.PayConductor) {
+              window.PayConductor.selectedPaymentMethod = method;
+            }
+            this.onPaymentMethodSelected?.(method);
+          }
         );
       };
       window.addEventListener("message", eventHandler);

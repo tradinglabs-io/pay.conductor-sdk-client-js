@@ -1,9 +1,10 @@
 {
   "name": "@payconductor-sdk-web/library",
   "private": true,
-  "scripts": {
+"scripts": {
     "start": "watch \"npm run build\" ./src",
-    "build": "mitosis build --c mitosis.config.cjs",
+    "clean:src": "node scripts/clean-src.js",
+    "build": "npm run clean:src && mitosis build --c mitosis.config.cjs",
     "lint": "eslint"
   },
   "type": "module",

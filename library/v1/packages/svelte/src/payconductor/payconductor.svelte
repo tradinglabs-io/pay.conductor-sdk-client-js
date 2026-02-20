@@ -2,34 +2,38 @@
   export interface PayConductorEmbedProps extends PayConductorConfig {
     height?: string;
     children?: any;
+    showActionButtons?: boolean;
     onReady?: () => void;
     onError?: (error: Error) => void;
     onPaymentComplete?: (result: PaymentResult) => void;
+    onPaymentFailed?: (result: PaymentResult) => void;
+    onPaymentPending?: (result: PaymentResult) => void;
+    onPaymentMethodSelected?: (method: PaymentMethod) => void;
   }
 </script>
 
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
+  import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
+  import type {
+    PayConductorConfig,
+    PaymentMethod,
+    PaymentResult,
+  } from "./iframe/types";
   import {
     confirmPayment,
-    createPaymentMethod,
     createPendingRequestsMap,
     handleMessageEvent,
-    PendingRequest,
     resetPayment,
     sendConfig,
     validatePayment,
   } from "./internal";
   import type {
-    ConfirmPaymentOptions,
-    CreatePaymentMethodOptions,
     PayConductorApi,
-    PayConductorConfig,
     PayConductorFrame,
     PayConductorState,
-    PaymentResult,
+    PendingRequest,
   } from "./types";
   import { buildIframeUrl } from "./utils";
 
@@ -39,9 +43,19 @@
   export let locale: PayConductorEmbedProps["locale"] = undefined;
   export let paymentMethods: PayConductorEmbedProps["paymentMethods"] =
     undefined;
+  export let defaultPaymentMethod: PayConductorEmbedProps["defaultPaymentMethod"] =
+    undefined;
+  export let showPaymentButtons: PayConductorEmbedProps["showPaymentButtons"] =
+    undefined;
   export let onReady: PayConductorEmbedProps["onReady"] = undefined;
   export let onError: PayConductorEmbedProps["onError"] = undefined;
   export let onPaymentComplete: PayConductorEmbedProps["onPaymentComplete"] =
+    undefined;
+  export let onPaymentFailed: PayConductorEmbedProps["onPaymentFailed"] =
+    undefined;
+  export let onPaymentPending: PayConductorEmbedProps["onPaymentPending"] =
+    undefined;
+  export let onPaymentMethodSelected: PayConductorEmbedProps["onPaymentMethodSelected"] =
     undefined;
 
   export let height: PayConductorEmbedProps["height"] = undefined;
@@ -63,6 +77,7 @@
   let error = null;
   let iframeUrl = "";
   let pendingMap = null;
+  let selectedPaymentMethod = null;
   let configSent = false;
 
   onMount(() => {
@@ -86,19 +101,20 @@
       theme: theme,
       locale: locale,
       paymentMethods: paymentMethods,
+      defaultPaymentMethod: defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      createPaymentMethod: (options: CreatePaymentMethodOptions) =>
-        createPaymentMethod(iframeRef, pendingMap, options),
-      confirmPayment: (options: ConfirmPaymentOptions) =>
+      confirmPayment: (options: { intentToken: string }) =>
         confirmPayment(iframeRef, pendingMap, options),
-      validate: (data: any) => validatePayment(iframeRef, pendingMap, data),
+      validate: (data: unknown) => validatePayment(iframeRef, pendingMap, data),
       reset: () => resetPayment(iframeRef, pendingMap),
+      getSelectedPaymentMethod: () => selectedPaymentMethod,
     };
     window.PayConductor = {
       frame,
       config,
       api,
+      selectedPaymentMethod: selectedPaymentMethod,
     };
     const sendConfigToIframe = async () => {
       if (!configSent && iframeRef) {
@@ -108,6 +124,8 @@
           theme: theme,
           locale: locale,
           paymentMethods: paymentMethods,
+          defaultPaymentMethod: defaultPaymentMethod,
+          showPaymentButtons: showPaymentButtons,
         });
       }
     };
@@ -126,7 +144,16 @@
         },
         onReady,
         onError,
-        onPaymentComplete
+        (data) => onPaymentComplete?.(data as PaymentResult),
+        (data) => onPaymentFailed?.(data as PaymentResult),
+        (data) => onPaymentPending?.(data as PaymentResult),
+        (method) => {
+          selectedPaymentMethod = method;
+          if (window.PayConductor) {
+            window.PayConductor.selectedPaymentMethod = method;
+          }
+          onPaymentMethodSelected?.(method);
+        }
       );
     };
     window.addEventListener("message", eventHandler);
@@ -146,7 +173,7 @@
     <iframe
       style={stringifyStyles({
         width: "100%",
-        height: height || IFRAME_DEFAULT_HEIGHT,
+        height: height || IFRAME_DEFAULT_HEIGHT_VALUE,
         border: "none",
       })}
       allow="payment"

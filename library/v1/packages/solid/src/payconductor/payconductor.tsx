@@ -3,30 +3,34 @@ import { Show, onMount, createSignal, createMemo } from "solid-js";
 export interface PayConductorEmbedProps extends PayConductorConfig {
   height?: string;
   children?: any;
+  showActionButtons?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
+  onPaymentFailed?: (result: PaymentResult) => void;
+  onPaymentPending?: (result: PaymentResult) => void;
+  onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 
-import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
+import type {
+  PayConductorConfig,
+  PaymentMethod,
+  PaymentResult,
+} from "./iframe/types";
 import {
   confirmPayment,
-  createPaymentMethod,
   createPendingRequestsMap,
   handleMessageEvent,
-  PendingRequest,
   resetPayment,
   sendConfig,
   validatePayment,
 } from "./internal";
 import type {
-  ConfirmPaymentOptions,
-  CreatePaymentMethodOptions,
   PayConductorApi,
-  PayConductorConfig,
   PayConductorFrame,
   PayConductorState,
-  PaymentResult,
+  PendingRequest,
 } from "./types";
 import { buildIframeUrl } from "./utils";
 
@@ -41,9 +45,11 @@ function PayConductor(props: PayConductorEmbedProps) {
 
   const [pendingMap, setPendingMap] = createSignal(null);
 
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = createSignal(null);
+
   const [configSent, setConfigSent] = createSignal(false);
 
-  let iframeRef: HTMLIFrameElement;
+  let iframeRef: any;
 
   onMount(() => {
     setIframeUrl(
@@ -68,19 +74,21 @@ function PayConductor(props: PayConductorEmbedProps) {
       theme: props.theme,
       locale: props.locale,
       paymentMethods: props.paymentMethods,
+      defaultPaymentMethod: props.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      createPaymentMethod: (options: CreatePaymentMethodOptions) =>
-        createPaymentMethod(iframeRef, pendingMap(), options),
-      confirmPayment: (options: ConfirmPaymentOptions) =>
+      confirmPayment: (options: { intentToken: string }) =>
         confirmPayment(iframeRef, pendingMap(), options),
-      validate: (data: any) => validatePayment(iframeRef, pendingMap(), data),
+      validate: (data: unknown) =>
+        validatePayment(iframeRef, pendingMap(), data),
       reset: () => resetPayment(iframeRef, pendingMap()),
+      getSelectedPaymentMethod: () => selectedPaymentMethod(),
     };
     window.PayConductor = {
       frame,
       config,
       api,
+      selectedPaymentMethod: selectedPaymentMethod(),
     };
     const sendConfigToIframe = async () => {
       if (!configSent() && iframeRef) {
@@ -90,6 +98,8 @@ function PayConductor(props: PayConductorEmbedProps) {
           theme: props.theme,
           locale: props.locale,
           paymentMethods: props.paymentMethods,
+          defaultPaymentMethod: props.defaultPaymentMethod,
+          showPaymentButtons: props.showPaymentButtons,
         });
       }
     };
@@ -108,7 +118,16 @@ function PayConductor(props: PayConductorEmbedProps) {
         },
         props.onReady,
         props.onError,
-        props.onPaymentComplete
+        (data) => props.onPaymentComplete?.(data as PaymentResult),
+        (data) => props.onPaymentFailed?.(data as PaymentResult),
+        (data) => props.onPaymentPending?.(data as PaymentResult),
+        (method) => {
+          setSelectedPaymentMethod(method);
+          if (window.PayConductor) {
+            window.PayConductor.selectedPaymentMethod = method;
+          }
+          props.onPaymentMethodSelected?.(method);
+        }
       );
     };
     window.addEventListener("message", eventHandler);
@@ -133,7 +152,7 @@ function PayConductor(props: PayConductorEmbedProps) {
             src={iframeUrl()}
             style={{
               width: "100%",
-              height: props.height || IFRAME_DEFAULT_HEIGHT,
+              height: props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
               border: "none",
             }}
           ></iframe>

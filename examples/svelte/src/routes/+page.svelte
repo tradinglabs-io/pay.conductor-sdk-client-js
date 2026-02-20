@@ -1,11 +1,15 @@
-<script>
-  import { PayConductor, usePayment, useFrame } from '@payconductor-sdk-client-js/library-svelte';
+<script lang="ts">
+  import { PayConductor, useElement, usePayConductor, type PaymentResult } from '@payconductor-sdk-client-js/library-svelte';
 
-  const { isReady, error: frameError } = useFrame();
-  const { createPaymentMethod, confirmPayment } = usePayment();
+  const { isReady, error } = usePayConductor();
+  const { submit, confirmPayment, update } = useElement();
 
   let errorMessage = null;
   let isProcessing = false;
+  let clientName = '';
+  let clientEmail = '';
+
+  $: update({ billingDetails: { name: clientName, email: clientEmail } });
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -18,18 +22,26 @@
     errorMessage = null;
 
     try {
-      const paymentMethod = await createPaymentMethod({
-        billingDetails: {
-          name: 'John Doe',
-          email: 'john@example.com'
-        }
-      });
-      console.log('Payment method created:', paymentMethod);
+      const { error: submitError } = await submit();
 
-      const result = await confirmPayment(paymentMethod.id);
-      console.log('Payment confirmed:', result);
-    } catch (error) {
-      errorMessage = error.message || 'Payment failed';
+      if (submitError) {
+        errorMessage = submitError.message || 'Validation failed';
+        isProcessing = false;
+        return;
+      }
+
+      const result: PaymentResult = await confirmPayment({
+        intentToken: 'pi_xxx_intent_token_xxx',
+        returnUrl: window.location.href,
+      });
+
+      console.log('Payment result:', result);
+
+      if (result.status === 'succeeded') {
+        alert('Payment successful!');
+      }
+    } catch (err) {
+      errorMessage = err.message || 'Payment failed';
     } finally {
       isProcessing = false;
     }
@@ -39,8 +51,8 @@
     console.log('PayConductor is ready');
   }
 
-  function handleError(error) {
-    console.error('Error:', error);
+  function handleError(err) {
+    console.error('Error:', err);
   }
 
   function handlePaymentComplete(result) {
@@ -52,14 +64,14 @@
 <h1>PayConductor Checkout</h1>
 
 <PayConductor
-  clientId="client_123"
-  token="token_abc123"
+  publicKey="pk_test_123"
+  intentToken="pi_test_abc123"
   theme={{ 
     primaryColor: '#0066ff',
     fontFamily: 'Roboto, sans-serif',
     borderRadius: '8px'
   }}
-  locale="en-US"
+  locale="pt-BR"
   height="500px"
   onReady={handleReady}
   onError={handleError}
@@ -68,11 +80,12 @@
   <form on:submit={handleSubmit}>
     <div style="margin-bottom: 16px">
       <label style="display: block; margin-bottom: 8px">
-        Full Name
+        Nome completo
       </label>
       <input 
         type="text" 
-        placeholder="John Doe"
+        placeholder="João Silva"
+        bind:value={clientName}
         style="width: 100%; padding: 12px; border: 1px solid #e6ebf1; border-radius: 4px"
       />
     </div>
@@ -83,7 +96,8 @@
       </label>
       <input 
         type="email" 
-        placeholder="john@example.com"
+        placeholder="joao@exemplo.com"
+        bind:value={clientEmail}
         style="width: 100%; padding: 12px; border: 1px solid #e6ebf1; border-radius: 4px"
       />
     </div>
@@ -93,7 +107,7 @@
       disabled={!$isReady || isProcessing}
       style="width: 100%; padding: 16px; background-color: {$isReady ? '#0066ff' : '#cfd7df'}; color: #ffffff; border: none; border-radius: 4px; cursor: {$isReady ? 'pointer' : 'not-allowed'}; font-size: 16px; font-weight: 600"
     >
-      {isProcessing ? 'Processing...' : 'Pay'}
+      {isProcessing ? 'Processando...' : 'Pagar agora'}
     </button>
 
     {#if errorMessage}
@@ -102,9 +116,9 @@
       </div>
     {/if}
 
-    {#if $frameError}
+    {#if $error}
       <div style="color: #fa755a; margin-top: 16px">
-        Frame error: {$frameError}
+        Erro: {$error}
       </div>
     {/if}
   </form>

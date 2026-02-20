@@ -1,5 +1,5 @@
 import { IFRAME_BASE_URL } from "./constants";
-import type { PayConductorConfig } from "./types";
+import type { PayConductorConfig } from "./iframe/types";
 export function buildIframeUrl(config: PayConductorConfig): string {
   const params = new URLSearchParams({
     publicKey: config.publicKey

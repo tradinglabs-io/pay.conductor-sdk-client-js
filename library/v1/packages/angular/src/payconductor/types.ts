@@ -1,78 +1,32 @@
-import type { PendingRequest } from "./internal";
+import { PayConductorConfig, PaymentMethod, PaymentResult } from "./iframe/types";
+export type ConfirmPaymentOptions = {
+  intentToken: string;
+  returnUrl?: string;
+};
+export type SubmitResult = {
+  error?: {
+    message: string;
+    code?: string;
+    type?: "validation_error" | "payment_error";
+  };
+  paymentMethod?: PaymentMethod;
+};
+export type PayConductorApi = {
+  confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
+  validate: (data: unknown) => Promise<boolean>;
+  reset: () => Promise<void>;
+  getSelectedPaymentMethod: () => PaymentMethod | null;
+};
 export type PayConductorFrame = {
   iframe: HTMLIFrameElement | Element | unknown | null;
   isReady: boolean;
   error: string | null;
 };
-export type PayConductorApi = {
-  createPaymentMethod: (options: CreatePaymentMethodOptions) => Promise<PaymentMethod>;
-  confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
-  validate: (data: any) => Promise<boolean>;
-  reset: () => Promise<void>;
-};
-export interface ConfirmPaymentOptions {
-  intentToken: string;
-  returnUrl?: string;
-}
 export type PayConductorContextValue = {
   frame: PayConductorFrame | null;
   config: PayConductorConfig | null;
   api: PayConductorApi;
-};
-export type PayConductorConfig = {
-  publicKey: string;
-  intentToken?: string;
-  theme?: PayConductorTheme;
-  locale?: string;
-  paymentMethods?: PaymentMethodsConfig;
-};
-export type PayConductorTheme = {
-  primaryColor?: string;
-  secondaryColor?: string;
-  backgroundColor?: string;
-  surfaceColor?: string;
-  textColor?: string;
-  textSecondaryColor?: string;
-  errorColor?: string;
-  successColor?: string;
-  warningColor?: string;
-  borderColor?: string;
-  disabledColor?: string;
-  fontFamily?: string;
-  fontSize?: {
-    xs?: string;
-    sm?: string;
-    md?: string;
-    lg?: string;
-    xl?: string;
-  };
-  fontWeight?: {
-    normal?: number;
-    medium?: number;
-    bold?: number;
-  };
-  lineHeight?: string;
-  spacing?: {
-    xs?: string;
-    sm?: string;
-    md?: string;
-    lg?: string;
-    xl?: string;
-  };
-  borderRadius?: string;
-  borderWidth?: string;
-  boxShadow?: string;
-  boxShadowHover?: string;
-  inputBackground?: string;
-  inputBorderColor?: string;
-  inputBorderRadius?: string;
-  inputHeight?: string;
-  inputPadding?: string;
-  buttonHeight?: string;
-  buttonPadding?: string;
-  buttonBorderRadius?: string;
-  transitionDuration?: string;
-  transitionTimingFunction?: string;
+  selectedPaymentMethod?: PaymentMethod | null;
 };
 export type PayConductorState = {
   isLoaded: boolean;
@@ -80,59 +34,9 @@ export type PayConductorState = {
   error: string | null;
   iframeUrl: string;
   pendingMap: Map<string, PendingRequest> | null;
+  selectedPaymentMethod: PaymentMethod | null;
 };
-export type CreatePaymentMethodOptions = {
-  billingDetails: BillingDetails;
-  card?: CardData;
-};
-export type BillingDetails = {
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: {
-    line1: string;
-    line2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-};
-export type CardData = {
-  number: string;
-  expMonth: string;
-  expYear: string;
-  cvc: string;
-};
-export type PaymentMethod = {
-  id: string;
-  type: "card";
-  card: {
-    brand: string;
-    last4: string;
-    expMonth: number;
-    expYear: number;
-  };
-  billingDetails?: BillingDetails;
-};
-export type PaymentResult = {
-  paymentIntentId: string;
-  status: "succeeded" | "pending" | "failed";
-  amount: number;
-  currency: string;
-};
-export type OutgoingMessageType = "INIT" | "CONFIG" | "UPDATE" | "SUBMIT" | "CREATE_PAYMENT_METHOD" | "CREATE_PIX_PAYMENT" | "CREATE_NUPAY_PAYMENT" | "CREATE_GOOGLE_PAYMENT" | "CREATE_APPLE_PAYMENT" | "CONFIRM_PAYMENT" | "VALIDATE" | "RESET";
-export type IncomingMessageType = "READY" | "ERROR" | "PAYMENT_METHOD_CREATED" | "PAYMENT_COMPLETE" | "VALIDATION_ERROR";
-export type PaymentMethodType = "card" | "pix" | "nupay" | "googlepay" | "applepay";
-export type PaymentMethodLayout = "grid" | "vertical" | "horizontal";
-export interface PaymentMethodOption {
-  type: PaymentMethodType;
-  label: string;
-  icon?: string;
-  enabled?: boolean;
-}
-export interface PaymentMethodsConfig {
-  layout?: PaymentMethodLayout;
-  showPayButton?: boolean;
-  methods?: PaymentMethodOption[];
+export type PendingRequest = {
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
 }

@@ -1,9 +1,13 @@
-import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
 
 import {
-  PendingRequest,
+  PayConductorConfig,
+  PaymentMethod,
+  PaymentResult,
+} from "./iframe/types";
+
+import {
   confirmPayment,
-  createPaymentMethod,
   createPendingRequestsMap,
   handleMessageEvent,
   resetPayment,
@@ -12,13 +16,10 @@ import {
 } from "./internal";
 
 import {
-  ConfirmPaymentOptions,
-  CreatePaymentMethodOptions,
   PayConductorApi,
-  PayConductorConfig,
   PayConductorFrame,
   PayConductorState,
-  PaymentResult,
+  PendingRequest,
 } from "./types";
 
 import { buildIframeUrl } from "./utils";
@@ -36,9 +37,13 @@ import {
 export interface PayConductorEmbedProps extends PayConductorConfig {
   height?: string;
   children?: any;
+  showActionButtons?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
+  onPaymentFailed?: (result: PaymentResult) => void;
+  onPaymentPending?: (result: PaymentResult) => void;
+  onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 export const PayConductor = component$((props: PayConductorEmbedProps) => {
   const iframeRef = useSignal<Element>();
@@ -49,6 +54,7 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
     isLoaded: false,
     isReady: false,
     pendingMap: null,
+    selectedPaymentMethod: null,
   });
   useVisibleTask$(() => {
     state.iframeUrl = buildIframeUrl({
@@ -71,20 +77,21 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       theme: props.theme,
       locale: props.locale,
       paymentMethods: props.paymentMethods,
+      defaultPaymentMethod: props.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      createPaymentMethod: (options: CreatePaymentMethodOptions) =>
-        createPaymentMethod(iframeRef.value, state.pendingMap, options),
-      confirmPayment: (options: ConfirmPaymentOptions) =>
+      confirmPayment: (options: { intentToken: string }) =>
         confirmPayment(iframeRef.value, state.pendingMap, options),
-      validate: (data: any) =>
+      validate: (data: unknown) =>
         validatePayment(iframeRef.value, state.pendingMap, data),
       reset: () => resetPayment(iframeRef.value, state.pendingMap),
+      getSelectedPaymentMethod: () => state.selectedPaymentMethod,
     };
     window.PayConductor = {
       frame,
       config,
       api,
+      selectedPaymentMethod: state.selectedPaymentMethod,
     };
     const sendConfigToIframe = async () => {
       if (!state.configSent && iframeRef.value) {
@@ -94,6 +101,8 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
           theme: props.theme,
           locale: props.locale,
           paymentMethods: props.paymentMethods,
+          defaultPaymentMethod: props.defaultPaymentMethod,
+          showPaymentButtons: props.showPaymentButtons,
         });
       }
     };
@@ -112,7 +121,16 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
         },
         props.onReady,
         props.onError,
-        props.onPaymentComplete
+        (data) => props.onPaymentComplete?.(data as PaymentResult),
+        (data) => props.onPaymentFailed?.(data as PaymentResult),
+        (data) => props.onPaymentPending?.(data as PaymentResult),
+        (method) => {
+          state.selectedPaymentMethod = method;
+          if (window.PayConductor) {
+            window.PayConductor.selectedPaymentMethod = method;
+          }
+          props.onPaymentMethodSelected?.(method);
+        }
       );
     };
     window.addEventListener("message", eventHandler);
@@ -136,7 +154,7 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
           src={state.iframeUrl}
           style={{
             width: "100%",
-            height: props.height || IFRAME_DEFAULT_HEIGHT,
+            height: props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
             border: "none",
           }}
         ></iframe>

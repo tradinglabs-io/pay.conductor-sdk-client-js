@@ -1,7 +1,8 @@
-import { PayConductorConfig, PayConductorFrame } from "../types";
+import type { PayConductorConfig } from "../iframe/types";
+import type { PayConductorFrame } from "../types";
 type UsePayConductorReturn = PayConductorFrame & Partial<PayConductorConfig>;
 export function usePayConductor(): UsePayConductorReturn {
-  const ctx = typeof window !== 'undefined' ? window.PayConductor : null;
+  const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const config = ctx?.config ? {
     publicKey: ctx.config.publicKey,
     intentToken: ctx.config.intentToken,

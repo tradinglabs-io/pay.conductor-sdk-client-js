@@ -1,30 +1,34 @@
 export interface PayConductorEmbedProps extends PayConductorConfig {
   height?: string;
   children?: any;
+  showActionButtons?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
+  onPaymentFailed?: (result: PaymentResult) => void;
+  onPaymentPending?: (result: PaymentResult) => void;
+  onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 
-import { IFRAME_DEFAULT_HEIGHT, MESSAGE_TYPES } from "./constants";
+import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
+import type {
+  PayConductorConfig,
+  PaymentMethod,
+  PaymentResult,
+} from "./iframe/types";
 import {
   confirmPayment,
-  createPaymentMethod,
   createPendingRequestsMap,
   handleMessageEvent,
-  PendingRequest,
   resetPayment,
   sendConfig,
   validatePayment,
 } from "./internal";
 import type {
-  ConfirmPaymentOptions,
-  CreatePaymentMethodOptions,
   PayConductorApi,
-  PayConductorConfig,
   PayConductorFrame,
   PayConductorState,
-  PaymentResult,
+  PendingRequest,
 } from "./types";
 import { buildIframeUrl } from "./utils";
 
@@ -53,6 +57,7 @@ class PayConductor extends HTMLElement {
       error: null,
       iframeUrl: "",
       pendingMap: null,
+      selectedPaymentMethod: null,
       configSent: false,
     };
     if (!this.props) {
@@ -65,9 +70,14 @@ class PayConductor extends HTMLElement {
       "theme",
       "locale",
       "paymentMethods",
+      "defaultPaymentMethod",
+      "showPaymentButtons",
       "onReady",
       "onError",
       "onPaymentComplete",
+      "onPaymentFailed",
+      "onPaymentPending",
+      "onPaymentMethodSelected",
       "children",
       "height",
     ];
@@ -167,20 +177,21 @@ class PayConductor extends HTMLElement {
       theme: this.props.theme,
       locale: this.props.locale,
       paymentMethods: this.props.paymentMethods,
+      defaultPaymentMethod: this.props.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      createPaymentMethod: (options: CreatePaymentMethodOptions) =>
-        createPaymentMethod(self._iframeRef, this.state.pendingMap, options),
-      confirmPayment: (options: ConfirmPaymentOptions) =>
+      confirmPayment: (options: { intentToken: string }) =>
         confirmPayment(self._iframeRef, this.state.pendingMap, options),
-      validate: (data: any) =>
+      validate: (data: unknown) =>
         validatePayment(self._iframeRef, this.state.pendingMap, data),
       reset: () => resetPayment(self._iframeRef, this.state.pendingMap),
+      getSelectedPaymentMethod: () => this.state.selectedPaymentMethod,
     };
     window.PayConductor = {
       frame,
       config,
       api,
+      selectedPaymentMethod: this.state.selectedPaymentMethod,
     };
     const sendConfigToIframe = async () => {
       if (!this.state.configSent && self._iframeRef) {
@@ -191,6 +202,8 @@ class PayConductor extends HTMLElement {
           theme: this.props.theme,
           locale: this.props.locale,
           paymentMethods: this.props.paymentMethods,
+          defaultPaymentMethod: this.props.defaultPaymentMethod,
+          showPaymentButtons: this.props.showPaymentButtons,
         });
       }
     };
@@ -211,7 +224,17 @@ class PayConductor extends HTMLElement {
         },
         this.props.onReady,
         this.props.onError,
-        this.props.onPaymentComplete
+        (data) => this.props.onPaymentComplete?.(data as PaymentResult),
+        (data) => this.props.onPaymentFailed?.(data as PaymentResult),
+        (data) => this.props.onPaymentPending?.(data as PaymentResult),
+        (method) => {
+          this.state.selectedPaymentMethod = method;
+          this.update();
+          if (window.PayConductor) {
+            window.PayConductor.selectedPaymentMethod = method;
+          }
+          this.props.onPaymentMethodSelected?.(method);
+        }
       );
     };
     window.addEventListener("message", eventHandler);
@@ -260,7 +283,7 @@ class PayConductor extends HTMLElement {
         el.setAttribute("src", this.state.iframeUrl);
         Object.assign(el.style, {
           width: "100%",
-          height: this.props.height || IFRAME_DEFAULT_HEIGHT,
+          height: this.props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
           border: "none",
         });
       });
