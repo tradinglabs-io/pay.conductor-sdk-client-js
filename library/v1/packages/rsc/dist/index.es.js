@@ -1,15 +1,15 @@
 "use client";
 import { jsx as L } from "react/jsx-runtime";
-import { useState as E, useEffect as S, useRef as Y } from "react";
-const U = "https://iframe.payconductor.ai/v1", b = "http://localhost:5175", g = 3e4, z = "600px";
-var T = /* @__PURE__ */ ((e) => (e.Init = "Init", e.Config = "Config", e.Update = "Update", e.ConfirmPayment = "ConfirmPayment", e.Validate = "Validate", e.Reset = "Reset", e))(T || {}), h = /* @__PURE__ */ ((e) => (e.Ready = "Ready", e.Error = "Error", e.PaymentComplete = "PaymentComplete", e.PaymentFailed = "PaymentFailed", e.PaymentPending = "PaymentPending", e.ValidationError = "ValidationError", e.PaymentMethodSelected = "PaymentMethodSelected", e))(h || {});
-const G = typeof window < "u" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"), H = G ? b : U, q = [b, U], B = z, W = g, f = {
-  INIT: T.Init,
-  CONFIG: T.Config,
-  UPDATE: T.Update,
-  CONFIRM_PAYMENT: T.ConfirmPayment,
-  VALIDATE: T.Validate,
-  RESET: T.Reset,
+import { useState as E, useEffect as S, useRef as g } from "react";
+const U = "https://iframe.payconductor.ai/v1", b = "http://localhost:5175", z = 3e4, G = "600px";
+var I = /* @__PURE__ */ ((e) => (e.Init = "Init", e.Config = "Config", e.Update = "Update", e.ConfirmPayment = "ConfirmPayment", e.Validate = "Validate", e.Reset = "Reset", e))(I || {}), h = /* @__PURE__ */ ((e) => (e.Ready = "Ready", e.Error = "Error", e.PaymentComplete = "PaymentComplete", e.PaymentFailed = "PaymentFailed", e.PaymentPending = "PaymentPending", e.ValidationError = "ValidationError", e.PaymentMethodSelected = "PaymentMethodSelected", e))(h || {});
+const H = typeof window < "u" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"), k = H ? b : U, q = [b, U], B = G, W = z, f = {
+  INIT: I.Init,
+  CONFIG: I.Config,
+  UPDATE: I.Update,
+  CONFIRM_PAYMENT: I.ConfirmPayment,
+  VALIDATE: I.Validate,
+  RESET: I.Reset,
   READY: h.Ready,
   ERROR: h.Error,
   PAYMENT_COMPLETE: h.PaymentComplete,
@@ -30,7 +30,7 @@ function j(e) {
   const n = new URLSearchParams({
     publicKey: e.publicKey
   });
-  return `${H}?${n.toString()}`;
+  return `${k}?${n.toString()}`;
 }
 function Q() {
   return crypto.randomUUID();
@@ -41,7 +41,7 @@ function $(e, n) {
 function N() {
   return /* @__PURE__ */ new Map();
 }
-function I(e, n, o, t) {
+function R(e, n, o, t) {
   return new Promise((i, m) => {
     if (!e || !("contentWindow" in e)) {
       m(new Error("Iframe not defined"));
@@ -69,23 +69,23 @@ function I(e, n, o, t) {
   });
 }
 function v(e, n, o) {
-  return I(e, n, f.CONFIRM_PAYMENT, {
-    intentToken: o.intentToken
+  return R(e, n, f.CONFIRM_PAYMENT, {
+    orderId: o.orderId
   });
 }
 function J(e, n, o) {
-  return I(e, n, f.VALIDATE, o);
+  return R(e, n, f.VALIDATE, o);
 }
 function X(e, n) {
-  return I(e, n, f.RESET);
+  return R(e, n, f.RESET);
 }
 function Z(e, n, o) {
-  return I(e, n, f.CONFIG, o);
+  return R(e, n, f.CONFIG, o);
 }
 function x(e, n, o) {
-  return I(e, n, f.INIT, o);
+  return R(e, n, f.INIT, o);
 }
-function p(e, n, o, t, i, m, c, C, R, y) {
+function p(e, n, o, t, i, m, c, C, T, y) {
   if (!$(e.origin, q))
     return;
   const D = e.data, {
@@ -119,7 +119,7 @@ function p(e, n, o, t, i, m, c, C, R, y) {
     return;
   }
   if (P === f.PAYMENT_PENDING) {
-    l && typeof l == "object" && "status" in l && (R == null || R(l));
+    l && typeof l == "object" && "status" in l && (T == null || T(l));
     return;
   }
   if (P === f.PAYMENT_METHOD_SELECTED) {
@@ -132,7 +132,7 @@ function oe(e) {
     () => !1
   ), [t, i] = E(
     () => !1
-  ), [m, c] = E(() => null), [C, R] = E(
+  ), [m, c] = E(() => null), [C, T] = E(
     () => ""
   ), [y, D] = E(
     () => null
@@ -147,7 +147,7 @@ function oe(e) {
     const M = j({
       publicKey: e.publicKey
     });
-    R(M), o(!0), D(N()), d("iframeUrl built:", M), d("pendingMap created");
+    T(M), o(!0), D(N()), d("iframeUrl built:", M), d("pendingMap created");
     const A = () => {
       var r, u;
       const a = (u = (r = window.PayConductor) == null ? void 0 : r.frame) == null ? void 0 : u.iframe;
@@ -174,9 +174,9 @@ function oe(e) {
       locale: e.locale,
       paymentMethods: e.paymentMethods,
       defaultPaymentMethod: e.defaultPaymentMethod
-    }, k = {
+    }, K = {
       confirmPayment: (a) => (d("confirmPayment called", {
-        intentToken: a.intentToken
+        orderId: a.orderId
       }), v(A(), y, a)),
       validate: (a) => (d("validate called", a), J(A(), y, a)),
       reset: () => (d("reset called"), X(A(), y)),
@@ -185,10 +185,10 @@ function oe(e) {
     window.PayConductor = {
       frame: O,
       config: F,
-      api: k,
+      api: K,
       selectedPaymentMethod: w
     }, d("window.PayConductor registered");
-    const K = async () => {
+    const V = async () => {
       if (!l) {
         const a = A();
         if (!a) {
@@ -210,12 +210,12 @@ function oe(e) {
           nuPayConfig: e.nuPayConfig
         });
       }
-    }, V = (a) => {
+    }, Y = (a) => {
       p(
         a,
         y,
         (r) => {
-          i(r), r && (d("iframe Ready — sending config"), K());
+          i(r), r && (d("iframe Ready — sending config"), V());
         },
         (r) => {
           c(r), d("iframe Error:", r);
@@ -246,7 +246,7 @@ function oe(e) {
         }
       );
     };
-    window.addEventListener("message", V), d("SDK initialized — waiting for PayConductorCheckoutElement");
+    window.addEventListener("message", Y), d("SDK initialized — waiting for PayConductorCheckoutElement");
   }, []), /* @__PURE__ */ L(
     "div",
     {
@@ -260,7 +260,7 @@ function oe(e) {
   );
 }
 function re(e) {
-  const n = Y(null), [o, t] = E(() => ""), [i, m] = E(() => !1);
+  const n = g(null), [o, t] = E(() => ""), [i, m] = E(() => !1);
   return S(() => {
     const c = typeof window < "u" ? window.PayConductor : null;
     c || console.warn(
@@ -296,7 +296,7 @@ function re(e) {
 function ae() {
   const e = typeof window < "u" ? window.PayConductor : null, n = e != null && e.config ? {
     publicKey: e.config.publicKey,
-    intentToken: e.config.intentToken,
+    orderId: e.config.orderId,
     theme: e.config.theme,
     locale: e.config.locale
   } : {}, o = e != null && e.frame ? {
@@ -342,8 +342,8 @@ function ie() {
     },
     confirmPayment: async (o) => {
       const t = _(e), i = N();
-      if (!o.intentToken)
-        throw new Error("Intent token is required");
+      if (!o.orderId)
+        throw new Error("Order ID is required");
       return v(t || void 0, i, o);
     },
     validate: e.api.validate,
@@ -353,17 +353,17 @@ function ie() {
       const t = e.config;
       n(f.CONFIG, {
         publicKey: t == null ? void 0 : t.publicKey,
-        intentToken: t == null ? void 0 : t.intentToken,
+        orderId: t == null ? void 0 : t.orderId,
         theme: o.theme ?? (t == null ? void 0 : t.theme),
         locale: o.locale ?? (t == null ? void 0 : t.locale),
         paymentMethods: o.paymentMethods ?? (t == null ? void 0 : t.paymentMethods)
       });
     },
-    updateIntentToken: (o) => {
+    updateorderId: (o) => {
       const t = e.config;
       n(f.CONFIG, {
         publicKey: t == null ? void 0 : t.publicKey,
-        intentToken: o,
+        orderId: o,
         theme: t == null ? void 0 : t.theme,
         locale: t == null ? void 0 : t.locale,
         paymentMethods: t == null ? void 0 : t.paymentMethods
@@ -375,7 +375,7 @@ function ie() {
     submit: async () => {
       const o = _(e), t = N();
       try {
-        return await I(o || void 0, t, f.CONFIRM_PAYMENT, {}), {
+        return await R(o || void 0, t, f.CONFIRM_PAYMENT, {}), {
           paymentMethod: void 0
         };
       } catch (i) {
@@ -405,7 +405,7 @@ function ie() {
     updateConfig: () => {
       throw new Error("PayConductor not initialized");
     },
-    updateIntentToken: () => {
+    updateorderId: () => {
       throw new Error("PayConductor not initialized");
     },
     update: () => {
@@ -419,7 +419,7 @@ function ie() {
 export {
   q as ALLOWED_ORIGINS,
   ne as ERROR_CODES,
-  H as IFRAME_BASE_URL,
+  k as IFRAME_BASE_URL,
   B as IFRAME_DEFAULT_HEIGHT_VALUE,
   f as POST_MESSAGES,
   oe as PayConductor,

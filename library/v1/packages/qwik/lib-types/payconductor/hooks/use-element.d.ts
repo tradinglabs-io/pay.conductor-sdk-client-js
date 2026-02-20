@@ -15,7 +15,8 @@ export type UpdateOptions = {
     billingDetails?: Partial<BillingDetails>;
     address?: Partial<BillingDetails["address"]>;
 };
-export interface UseElementReturn {
+export interface UsePayconductorElementReturn {
+    init: (config: PayConductorConfig) => Promise<void>;
     confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
     validate: (data: unknown) => Promise<boolean>;
     reset: () => Promise<void>;
@@ -25,4 +26,4 @@ export interface UseElementReturn {
     update: (options: UpdateOptions) => void;
     submit: () => Promise<SubmitResult>;
 }
-export declare function useElement(): UseElementReturn;
+export declare function usePayconductorElement(): UsePayconductorElementReturn;

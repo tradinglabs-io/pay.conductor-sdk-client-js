@@ -1,6 +1,6 @@
 import { PayConductorConfig, PaymentMethod, PaymentResult } from './iframe/types';
 
-export type { CardTokenData, CardFullData, CardPaymentData, PixPaymentData, CreditCardPaymentData, BankSlipPaymentData, NuPayData, NuPayPaymentData, PicPayPaymentData, PaymentConfirmData } from './iframe/types';
+export type * from './iframe/types';
 export type ConfirmPaymentOptions = {
     orderId: string;
     returnUrl?: string;

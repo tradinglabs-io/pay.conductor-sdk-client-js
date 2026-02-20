@@ -9,7 +9,7 @@ export type SubmitResult = {
     paymentMethod?: PaymentMethod;
 };
 export type ConfirmPaymentOptions = {
-    intentToken: string;
+    orderId: string;
     returnUrl?: string;
 };
 export type UpdateOptions = {
@@ -23,7 +23,7 @@ export interface UsePayconductorElementReturn {
     reset: () => Promise<void>;
     getSelectedPaymentMethod: () => PaymentMethod | null;
     updateConfig: (config: Partial<Pick<PayConductorConfig, "theme" | "locale" | "paymentMethods">>) => void;
-    updateIntentToken: (intentToken: string) => void;
+    updateorderId: (orderId: string) => void;
     update: (options: UpdateOptions) => void;
     submit: () => Promise<SubmitResult>;
 }
