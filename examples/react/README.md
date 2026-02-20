@@ -125,6 +125,7 @@ const App = () => (
     }}
     locale="en-US"
     height="500px"
+    debug={true}
     onReady={() => console.log('PayConductor is ready')}
     onError={(error) => console.error('Error:', error)}
     onPaymentComplete={(result) => console.log('Payment complete:', result)}
@@ -149,6 +150,7 @@ The provider component that wraps your application and initializes the PayConduc
   theme={{ primaryColor: '#0066ff' }}
   locale="en-US"
   height="500px"
+    debug={true}
   onReady={() => {}}
   onError={(error) => {}}
   onPaymentComplete={(result) => {}}
@@ -164,6 +166,7 @@ The provider component that wraps your application and initializes the PayConduc
 | `theme` | `object` | Custom theme options |
 | `locale` | `string` | Locale for the payment form (e.g., 'en-US', 'pt-BR') |
 | `height` | `string` | Height of the iframe (default: '500px') |
+| `debug` | `boolean` | Enable debug mode with prefixed console.log for key events |
 | `onReady` | `function` | Called when the iframe is ready |
 | `onError` | `function` | Called when an error occurs |
 | `onPaymentComplete` | `function` | Called when payment is complete |
@@ -316,6 +319,7 @@ const App = () => (
     }}
     locale="en-US"
     height="500px"
+    debug={true}
     onReady={() => console.log('PayConductor is ready')}
     onError={(error) => console.error('Error:', error)}
     onPaymentComplete={(result) => console.log('Payment complete:', result)}
@@ -340,6 +344,7 @@ The provider component that wraps your application and initializes the PayConduc
   theme={{ primaryColor: '#0066ff' }}
   locale="en-US"
   height="500px"
+    debug={true}
   onReady={() => {}}
   onError={(error) => {}}
   onPaymentComplete={(result) => {}}
@@ -355,6 +360,7 @@ The provider component that wraps your application and initializes the PayConduc
 | `theme` | `object` | Custom theme options |
 | `locale` | `string` | Locale for the payment form (e.g., 'en-US', 'pt-BR') |
 | `height` | `string` | Height of the iframe (default: '500px') |
+| `debug` | `boolean` | Enable debug mode with prefixed console.log for key events |
 | `onReady` | `function` | Called when the iframe is ready |
 | `onError` | `function` | Called when an error occurs |
 | `onPaymentComplete` | `function` | Called when payment is complete |

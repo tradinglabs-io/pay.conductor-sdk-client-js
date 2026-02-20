@@ -4,7 +4,7 @@
 
 export const APP_BASE_URL_PROD = "https://app.payconductor.ai";
 export const API_BASE_URL_PROD = "https://app.payconductor.ai/api/v1";
-export const IFRAME_BASE_URL_PROD = "https://iframe.payconductor.ai";
+export const IFRAME_BASE_URL_PROD = "https://iframe.payconductor.ai/v1";
 export const IFRAME_BASE_URL_DEV = "http://localhost:5175";
 export const APP_BASE_URL_DEV = "http://localhost:3000";
 export const DEFAULT_LOCALE = "pt-BR";

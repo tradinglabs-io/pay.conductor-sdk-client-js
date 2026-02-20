@@ -73,6 +73,7 @@
   }}
   locale="pt-BR"
   height="500px"
+  debug={true}
   onReady={handleReady}
   onError={handleError}
   onPaymentComplete={handlePaymentComplete}

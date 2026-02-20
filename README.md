@@ -62,6 +62,7 @@ function Checkout() {
       intentToken="pi_test_abc123"
       theme={{ primaryColor: '#0066ff' }}
       locale="pt-BR"
+      debug={true}
       onReady={() => console.log('Ready')}
       onPaymentComplete={(result) => console.log(result)}
     >
@@ -141,6 +142,7 @@ const onPaymentComplete = (result) => console.log(result);
   intentToken="pi_test_abc123"
   theme={{ primaryColor: '#0066ff' }}
   locale="pt-BR"
+  debug={true}
   onPaymentComplete={(result) => console.log(result)}
 >
   <input bind:value={clientName} placeholder="Name" />
@@ -162,6 +164,7 @@ Main component that initializes the payment iframe.
 | `theme` | `PayConductorTheme` | Theme customization options |
 | `locale` | `string` | Locale (e.g., 'en-US', 'pt-BR') |
 | `height` | `string` | Iframe height (default: '500px') |
+| `debug` | `boolean` | Enable debug mode with prefixed console.log for key events |
 | `onReady` | `function` | Called when iframe is ready |
 | `onError` | `function` | Called when an error occurs |
 | `onPaymentComplete` | `function` | Called when payment is completed |

@@ -77,6 +77,7 @@ export default component$(() => {
 				onPaymentComplete={handlePaymentComplete}
 				onReady={handleReady}
 				publicKey="pk_test_123"
+				debug={true}
 				theme={{
 					primaryColor: "#0066ff",
 					fontFamily: "Roboto, sans-serif",
