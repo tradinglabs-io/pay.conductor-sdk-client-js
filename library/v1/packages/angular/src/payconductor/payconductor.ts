@@ -83,6 +83,7 @@ export default class PayConductor {
   @Input()
   defaultPaymentMethod!: PayConductorEmbedProps["defaultPaymentMethod"];
   @Input() showPaymentButtons!: PayConductorEmbedProps["showPaymentButtons"];
+  @Input() nuPayConfig!: PayConductorEmbedProps["nuPayConfig"];
   @Input() onReady!: PayConductorEmbedProps["onReady"];
   @Input() onError!: PayConductorEmbedProps["onError"];
   @Input() onPaymentComplete!: PayConductorEmbedProps["onPaymentComplete"];
@@ -155,6 +156,7 @@ export default class PayConductor {
             paymentMethods: this.paymentMethods,
             defaultPaymentMethod: this.defaultPaymentMethod,
             showPaymentButtons: this.showPaymentButtons,
+            nuPayConfig: this.nuPayConfig,
           });
         }
       };

@@ -72,6 +72,7 @@ export default defineComponent({
     "paymentMethods",
     "defaultPaymentMethod",
     "showPaymentButtons",
+    "nuPayConfig",
     "onReady",
     "onError",
     "onPaymentComplete",
@@ -141,6 +142,7 @@ export default defineComponent({
           paymentMethods: this.paymentMethods,
           defaultPaymentMethod: this.defaultPaymentMethod,
           showPaymentButtons: this.showPaymentButtons,
+          nuPayConfig: this.nuPayConfig,
         });
       }
     };

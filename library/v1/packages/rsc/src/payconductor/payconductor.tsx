@@ -111,6 +111,7 @@ function PayConductor(props: PayConductorEmbedProps) {
           paymentMethods: props.paymentMethods,
           defaultPaymentMethod: props.defaultPaymentMethod,
           showPaymentButtons: props.showPaymentButtons,
+          nuPayConfig: props.nuPayConfig,
         });
       }
     };

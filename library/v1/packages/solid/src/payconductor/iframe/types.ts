@@ -38,21 +38,21 @@ export enum InputStyleKey {
   Shadow = "shadow",
 }
 export enum OutgoingMessage {
-  Init = "INIT",
-  Config = "CONFIG",
-  Update = "UPDATE",
-  ConfirmPayment = "CONFIRM_PAYMENT",
-  Validate = "VALIDATE",
-  Reset = "RESET",
+  Init = "Init",
+  Config = "Config",
+  Update = "Update",
+  ConfirmPayment = "ConfirmPayment",
+  Validate = "Validate",
+  Reset = "Reset",
 }
 export enum IncomingMessage {
-  Ready = "READY",
-  Error = "ERROR",
-  PaymentComplete = "PAYMENT_COMPLETE",
-  PaymentFailed = "PAYMENT_FAILED",
-  PaymentPending = "PAYMENT_PENDING",
-  ValidationError = "VALIDATION_ERROR",
-  PaymentMethodSelected = "PAYMENT_METHOD_SELECTED",
+  Ready = "Ready",
+  Error = "Error",
+  PaymentComplete = "PaymentComplete",
+  PaymentFailed = "PaymentFailed",
+  PaymentPending = "PaymentPending",
+  ValidationError = "ValidationError",
+  PaymentMethodSelected = "PaymentMethodSelected",
 }
 export enum ErrorCode {
   InvalidClient = "InvalidClient",
@@ -194,6 +194,8 @@ export type PayConductorConfig = {
   paymentMethodsConfig?: PaymentMethodConfig[];
   methodsDirection?: "vertical" | "horizontal";
   showPaymentButtons?: boolean;
+  /** Required when NuPay is an available payment method */
+  nuPayConfig?: NuPayData;
 };
 export type BillingDetails = {
   name: string;
@@ -246,11 +248,6 @@ export interface MessagePayload {
     field?: string;
   };
 }
-
-// ---------------------------------------------------------------------------
-// Payment Confirm Data Models (mirrors server paymentDataModel union)
-// ---------------------------------------------------------------------------
-
 export type CardTokenData = {
   token: string;
   firstSixCardNumber?: string;

@@ -48,7 +48,7 @@ export function validatePayment(iframe: HTMLIFrameElement | Element | undefined,
 export function resetPayment(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null): Promise<void> {
   return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.RESET) as Promise<void>;
 }
-export function sendConfig(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, config: Pick<PayConductorConfig, "intentToken" | "theme" | "locale" | "paymentMethods" | "defaultPaymentMethod" | "showPaymentButtons">): Promise<void> {
+export function sendConfig(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, config: Pick<PayConductorConfig, "intentToken" | "theme" | "locale" | "paymentMethods" | "defaultPaymentMethod" | "showPaymentButtons" | "nuPayConfig">): Promise<void> {
   return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.CONFIG, config) as Promise<void>;
 }
 type MessagePayload = {

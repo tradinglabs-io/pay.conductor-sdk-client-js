@@ -47,6 +47,7 @@
     undefined;
   export let showPaymentButtons: PayConductorEmbedProps["showPaymentButtons"] =
     undefined;
+  export let nuPayConfig: PayConductorEmbedProps["nuPayConfig"] = undefined;
   export let onReady: PayConductorEmbedProps["onReady"] = undefined;
   export let onError: PayConductorEmbedProps["onError"] = undefined;
   export let onPaymentComplete: PayConductorEmbedProps["onPaymentComplete"] =
@@ -126,6 +127,7 @@
           paymentMethods: paymentMethods,
           defaultPaymentMethod: defaultPaymentMethod,
           showPaymentButtons: showPaymentButtons,
+          nuPayConfig: nuPayConfig,
         });
       }
     };

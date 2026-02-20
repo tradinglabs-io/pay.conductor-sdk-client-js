@@ -72,6 +72,7 @@ class PayConductor extends HTMLElement {
       "paymentMethods",
       "defaultPaymentMethod",
       "showPaymentButtons",
+      "nuPayConfig",
       "onReady",
       "onError",
       "onPaymentComplete",
@@ -204,6 +205,7 @@ class PayConductor extends HTMLElement {
           paymentMethods: this.props.paymentMethods,
           defaultPaymentMethod: this.props.defaultPaymentMethod,
           showPaymentButtons: this.props.showPaymentButtons,
+          nuPayConfig: this.props.nuPayConfig,
         });
       }
     };
