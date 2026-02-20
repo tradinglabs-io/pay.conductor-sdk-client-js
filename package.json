@@ -11,7 +11,7 @@
     "examples/*"
   ],
   "dependencies": {
-    "@payconductor-sdk-web/library-qwik": "^0.0.1"
+    "@payconductor-sdk-web/library-qwik": "workspace:*"
   },
   "devDependencies": {
     "@inquirer/prompts": "^8.2.1",
