@@ -41,7 +41,10 @@ export const PayConductorCheckoutElement = component$(
           width: "100%",
         }}
       >
-        {state.isLoaded && state.iframeUrl ? (
+        {state.isLoaded &&
+        state.iframeUrl &&
+        iframeRef.value &&
+        "contentWindow" in iframeRef.value ? (
           <iframe
             allow="payment"
             title="PayConductor"

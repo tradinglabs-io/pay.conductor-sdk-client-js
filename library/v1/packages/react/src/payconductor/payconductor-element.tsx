@@ -9,7 +9,7 @@ export interface PayConductorCheckoutElementProps {
 import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
 
 function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
-  const iframeRef = useRef<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement | Element | unknown | null>(null);
   const [iframeUrl, setIframeUrl] = useState(() => "");
 
   const [isLoaded, setIsLoaded] = useState(() => false);
@@ -39,7 +39,10 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
         width: "100%",
       }}
     >
-      {isLoaded && iframeUrl ? (
+      {isLoaded &&
+      iframeUrl &&
+      iframeRef.current &&
+      "contentWindow" in iframeRef.current ? (
         <iframe
           allow="payment"
           title="PayConductor"

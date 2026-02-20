@@ -11,7 +11,7 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
 
   const [isLoaded, setIsLoaded] = createSignal(false);
 
-  let iframeRef: any;
+  let iframeRef: HTMLIFrameElement | Element | unknown | null;
 
   onMount(() => {
     const ctx = typeof window !== "undefined" ? window.PayConductor : null;
@@ -39,7 +39,14 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
           width: "100%",
         }}
       >
-        <Show when={isLoaded() && iframeUrl()}>
+        <Show
+          when={
+            isLoaded() &&
+            iframeUrl() &&
+            iframeRef &&
+            "contentWindow" in iframeRef
+          }
+        >
           <iframe
             allow="payment"
             title="PayConductor"

@@ -155,7 +155,11 @@ class PayConductorCheckoutElement extends HTMLElement {
     this._root
       .querySelectorAll("[data-el='show-pay-conductor-checkout-element']")
       .forEach((el) => {
-        const whenCondition = this.state.isLoaded && this.state.iframeUrl;
+        const whenCondition =
+          this.state.isLoaded &&
+          this.state.iframeUrl &&
+          self._iframeRef &&
+          "contentWindow" in self._iframeRef;
         if (whenCondition) {
           this.showContent(el);
         }
