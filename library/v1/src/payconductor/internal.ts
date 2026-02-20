@@ -95,6 +95,19 @@ export function sendConfig(
 	) as Promise<void>;
 }
 
+export function sendInit(
+	iframe: HTMLIFrameElement | Element | undefined,
+	pendingMap: Map<string, PendingRequest> | null,
+	config: PayConductorConfig,
+): Promise<void> {
+	return sendMessageToIframe(
+		iframe,
+		pendingMap,
+		POST_MESSAGES.INIT,
+		config,
+	) as Promise<void>;
+}
+
 type MessagePayload = {
 	requestId?: string;
 	type?: string;

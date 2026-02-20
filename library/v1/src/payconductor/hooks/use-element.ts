@@ -8,6 +8,7 @@ import type {
 import {
 	confirmPayment,
 	createPendingRequestsMap,
+	sendInit,
 	sendMessageToIframe,
 } from "../internal";
 
@@ -31,6 +32,7 @@ export type UpdateOptions = {
 };
 
 export interface UseElementReturn {
+	init: (config: PayConductorConfig) => Promise<void>;
 	confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
 	validate: (data: unknown) => Promise<boolean>;
 	reset: () => Promise<void>;
@@ -71,6 +73,9 @@ export function useElement(): UseElementReturn {
 
 	if (!ctx) {
 		return {
+			init: async () => {
+				throw new Error("PayConductor not initialized");
+			},
 			confirmPayment: async () => {
 				throw new Error("PayConductor not initialized");
 			},
@@ -97,6 +102,11 @@ export function useElement(): UseElementReturn {
 	}
 
 	return {
+		init: async (config: PayConductorConfig): Promise<void> => {
+			const iframe = getIframeFromContext(ctx);
+			const pendingMap = createPendingRequestsMap();
+			return sendInit(iframe || undefined, pendingMap, config);
+		},
 		confirmPayment: async (
 			options: ConfirmPaymentOptions,
 		): Promise<PaymentResult> => {
