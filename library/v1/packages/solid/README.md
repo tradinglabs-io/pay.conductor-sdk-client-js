@@ -1,28 +1,29 @@
-# @payconductor-sdk-web/library-react
+# @payconductor-sdk-web/library-solid
 
-React SDK for [PayConductor](https://payconductor.ai) payment integration.
+Solid.js SDK for [PayConductor](https://payconductor.ai) payment integration.
 
-[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-react.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-react)
+[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-solid.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-solid)
 
 ## Requirements
 
-Minimum React version: **v16.8**.
+Minimum Solid version: **v1**.
 
 ## Installation
 
 ```bash
-npm install @payconductor-sdk-web/library-react payconductor-sdk
+npm install @payconductor-sdk-web/library-solid payconductor-sdk
 # or
-yarn add @payconductor-sdk-web/library-react payconductor-sdk
+yarn add @payconductor-sdk-web/library-solid payconductor-sdk
 # or
-pnpm add @payconductor-sdk-web/library-react payconductor-sdk
+pnpm add @payconductor-sdk-web/library-solid payconductor-sdk
 # or
-bun add @payconductor-sdk-web/library-react payconductor-sdk
+bun add @payconductor-sdk-web/library-solid payconductor-sdk
 ```
 
 ## Quick Start
 
 ```tsx
+import { createSignal } from 'solid-js';
 import {
   PayConductor,
   PayConductorCheckoutElement,
@@ -30,7 +31,7 @@ import {
   usePayconductorElement,
   type PaymentMethod,
   type PaymentResult,
-} from '@payconductor-sdk-web/library-react';
+} from '@payconductor-sdk-web/library-solid';
 import {
   AvailablePaymentMethods,
   Configuration,
@@ -49,11 +50,11 @@ function CheckoutForm() {
   const { isReady, error } = usePayConductor();
   const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+  const [isProcessing, setIsProcessing] = createSignal(false);
 
   const handleFinalize = async () => {
-    if (!isReady) return;
+    if (!isReady()) return;
     setIsProcessing(true);
     setErrorMessage(null);
 
@@ -93,21 +94,21 @@ function CheckoutForm() {
     }
   };
 
-  const selectedMethod = getSelectedPaymentMethod();
-
   return (
     <div>
       {/* The iframe is rendered here */}
       <PayConductorCheckoutElement height="600px" />
 
-      {selectedMethod && <p>Selected method: <strong>{selectedMethod}</strong></p>}
+      {getSelectedPaymentMethod() && (
+        <p>Selected method: <strong>{getSelectedPaymentMethod()}</strong></p>
+      )}
 
-      <button type="button" onClick={handleFinalize} disabled={!isReady || isProcessing}>
-        {isProcessing ? 'Processing...' : 'Checkout'}
+      <button type="button" disabled={!isReady() || isProcessing()} onClick={handleFinalize}>
+        {isProcessing() ? 'Processing...' : 'Checkout'}
       </button>
 
-      {errorMessage && <div>{errorMessage}</div>}
-      {error && <div>Error: {error}</div>}
+      {errorMessage() && <div>{errorMessage()}</div>}
+      {error() && <div>Error: {error()}</div>}
     </div>
   );
 }
@@ -120,6 +121,7 @@ export default function App() {
       debug={true}
       theme={{ primaryColor: '#0066ff', borderRadius: '8px' }}
       onReady={() => console.log('Ready')}
+      onError={(err) => console.error('Error:', err)}
       onPaymentComplete={(result: PaymentResult) => console.log('Complete:', result)}
       onPaymentMethodSelected={(method: PaymentMethod) => console.log('Method:', method)}
     >
@@ -133,7 +135,7 @@ export default function App() {
 
 ### `<PayConductor />`
 
-Provider component that initializes the payment session. **Does not render the iframe directly** — use `<PayConductorCheckoutElement>` for that.
+Provider component that initializes the payment session.
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -156,7 +158,7 @@ Provider component that initializes the payment session. **Does not render the i
 
 ### `<PayConductorCheckoutElement />`
 
-Renders the payment iframe. Place it inside `<PayConductor>` wherever you want the iframe in your layout.
+Renders the payment iframe. Place it inside `<PayConductor>`.
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -164,16 +166,17 @@ Renders the payment iframe. Place it inside `<PayConductor>` wherever you want t
 
 ### `usePayConductor()`
 
-Hook that provides frame state.
+Hook that provides frame state as Solid signals.
 
 ```tsx
 const { isReady, error } = usePayConductor();
+// isReady() and error() are accessor functions
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `isReady` | `boolean` | Whether the iframe is ready |
-| `error` | `string \| null` | Error message, if any |
+| `isReady` | `Accessor<boolean>` | Whether the iframe is ready |
+| `error` | `Accessor<string \| null>` | Error message, if any |
 
 ### `usePayconductorElement()`
 
@@ -214,38 +217,7 @@ import type {
   PayConductorTheme,
   PayConductorConfig,
   PaymentConfirmData,
-  PixPaymentData,
-  CreditCardPaymentData,
-  BankSlipPaymentData,
-  NuPayPaymentData,
-  PicPayPaymentData,
-  CardPaymentData,
-  BillingDetails,
-} from '@payconductor-sdk-web/library-react';
-```
-
-## Payment Flow
-
-```
-1. <PayConductor publicKey="pk_xxx"> mounts
-   └─ Registers window.PayConductor, stores iframeUrl
-
-2. <PayConductorCheckoutElement /> mounts
-   └─ Reads iframeUrl, renders the iframe
-
-3. iframe loads → fetches payment methods → sends Ready
-   SDK receives Ready → sends config (theme, locale, paymentMethods)
-
-4. User selects payment method
-   └─ onPaymentMethodSelected fires
-   └─ getSelectedPaymentMethod() returns the chosen method
-
-5. User clicks "Checkout" (your button, outside the iframe)
-   └─ payconductor-sdk creates Draft order → returns orderId
-   └─ confirmPayment({ orderId })
-   └─ iframe collects form data → POST /orders/:id/confirm
-
-6. SDK receives PaymentComplete/Failed/Pending → callbacks fire
+} from '@payconductor-sdk-web/library-solid';
 ```
 
 ## License

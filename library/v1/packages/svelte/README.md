@@ -1,61 +1,62 @@
-# @payconductor-sdk-web/library-react
+# @payconductor-sdk-web/library-svelte
 
-React SDK for [PayConductor](https://payconductor.ai) payment integration.
+Svelte SDK for [PayConductor](https://payconductor.ai) payment integration.
 
-[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-react.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-react)
+[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-svelte.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-svelte)
 
 ## Requirements
 
-Minimum React version: **v16.8**.
+Minimum Svelte version: **v4**.
 
 ## Installation
 
 ```bash
-npm install @payconductor-sdk-web/library-react payconductor-sdk
+npm install @payconductor-sdk-web/library-svelte payconductor-sdk
 # or
-yarn add @payconductor-sdk-web/library-react payconductor-sdk
+yarn add @payconductor-sdk-web/library-svelte payconductor-sdk
 # or
-pnpm add @payconductor-sdk-web/library-react payconductor-sdk
+pnpm add @payconductor-sdk-web/library-svelte payconductor-sdk
 # or
-bun add @payconductor-sdk-web/library-react payconductor-sdk
+bun add @payconductor-sdk-web/library-svelte payconductor-sdk
 ```
 
 ## Quick Start
 
-```tsx
-import {
-  PayConductor,
-  PayConductorCheckoutElement,
-  usePayConductor,
-  usePayconductorElement,
-  type PaymentMethod,
-  type PaymentResult,
-} from '@payconductor-sdk-web/library-react';
-import {
-  AvailablePaymentMethods,
-  Configuration,
-  DocumentType,
-  OrderApi,
-  type OrderCreateRequest,
-} from 'payconductor-sdk';
+```svelte
+<script lang="ts">
+  import {
+    PayConductor,
+    PayConductorCheckoutElement,
+    usePayConductor,
+    usePayconductorElement,
+    type PaymentMethod,
+    type PaymentResult,
+  } from '@payconductor-sdk-web/library-svelte';
+  import {
+    AvailablePaymentMethods,
+    Configuration,
+    DocumentType,
+    OrderApi,
+    type OrderCreateRequest,
+  } from 'payconductor-sdk';
 
-const sdkConfig = new Configuration({
-  username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || 'your_client_id',
-  password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || 'your_client_secret',
-});
-const orderApi = new OrderApi(sdkConfig);
-
-function CheckoutForm() {
   const { isReady, error } = usePayConductor();
   const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const sdkConfig = new Configuration({
+    username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || 'your_client_id',
+    password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || 'your_client_secret',
+  });
+  const orderApi = new OrderApi(sdkConfig);
 
-  const handleFinalize = async () => {
-    if (!isReady) return;
-    setIsProcessing(true);
-    setErrorMessage(null);
+  let errorMessage: string | null = null;
+  let isProcessing = false;
+  $: selectedMethod = getSelectedPaymentMethod();
+
+  async function handleFinalize() {
+    if (!$isReady) return;
+    isProcessing = true;
+    errorMessage = null;
 
     try {
       // 1. Create the Draft order via payconductor-sdk to get the orderId
@@ -87,46 +88,42 @@ function CheckoutForm() {
       const result: PaymentResult = await confirmPayment({ orderId: data.id });
       if (result.status === 'succeeded') alert('Payment successful!');
     } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : 'Payment failed');
+      errorMessage = err instanceof Error ? err.message : 'Payment failed';
     } finally {
-      setIsProcessing(false);
+      isProcessing = false;
     }
-  };
+  }
+</script>
 
-  const selectedMethod = getSelectedPaymentMethod();
+<PayConductor
+  publicKey="pk_test_123"
+  locale="pt-BR"
+  debug={true}
+  theme={{ primaryColor: '#0066ff', borderRadius: '8px' }}
+  onReady={() => console.log('Ready')}
+  onError={(err) => console.error('Error:', err)}
+  onPaymentComplete={(result) => console.log('Complete:', result)}
+  onPaymentMethodSelected={(method) => console.log('Method:', method)}
+>
+  <!-- The iframe is rendered here -->
+  <PayConductorCheckoutElement height="600px" />
 
-  return (
-    <div>
-      {/* The iframe is rendered here */}
-      <PayConductorCheckoutElement height="600px" />
+  {#if selectedMethod}
+    <p>Selected method: <strong>{selectedMethod}</strong></p>
+  {/if}
 
-      {selectedMethod && <p>Selected method: <strong>{selectedMethod}</strong></p>}
+  <button type="button" disabled={!$isReady || isProcessing} on:click={handleFinalize}>
+    {isProcessing ? 'Processing...' : 'Checkout'}
+  </button>
 
-      <button type="button" onClick={handleFinalize} disabled={!isReady || isProcessing}>
-        {isProcessing ? 'Processing...' : 'Checkout'}
-      </button>
+  {#if errorMessage}
+    <div>{errorMessage}</div>
+  {/if}
 
-      {errorMessage && <div>{errorMessage}</div>}
-      {error && <div>Error: {error}</div>}
-    </div>
-  );
-}
-
-export default function App() {
-  return (
-    <PayConductor
-      publicKey="pk_test_123"
-      locale="pt-BR"
-      debug={true}
-      theme={{ primaryColor: '#0066ff', borderRadius: '8px' }}
-      onReady={() => console.log('Ready')}
-      onPaymentComplete={(result: PaymentResult) => console.log('Complete:', result)}
-      onPaymentMethodSelected={(method: PaymentMethod) => console.log('Method:', method)}
-    >
-      <CheckoutForm />
-    </PayConductor>
-  );
-}
+  {#if $error}
+    <div>Error: {$error}</div>
+  {/if}
+</PayConductor>
 ```
 
 ## API Reference
@@ -156,7 +153,7 @@ Provider component that initializes the payment session. **Does not render the i
 
 ### `<PayConductorCheckoutElement />`
 
-Renders the payment iframe. Place it inside `<PayConductor>` wherever you want the iframe in your layout.
+Renders the payment iframe. Place it inside `<PayConductor>`.
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -164,33 +161,38 @@ Renders the payment iframe. Place it inside `<PayConductor>` wherever you want t
 
 ### `usePayConductor()`
 
-Hook that provides frame state.
+Returns Svelte stores for frame state. Access values with the `$` prefix in templates.
 
-```tsx
-const { isReady, error } = usePayConductor();
+```svelte
+<script>
+  const { isReady, error } = usePayConductor();
+  // Use $isReady and $error in the template
+</script>
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `isReady` | `boolean` | Whether the iframe is ready |
-| `error` | `string \| null` | Error message, if any |
+| `isReady` | `Readable<boolean>` | Whether the iframe is ready (Svelte store) |
+| `error` | `Readable<string \| null>` | Error message, if any (Svelte store) |
 
 ### `usePayconductorElement()`
 
-Hook that provides payment action methods.
+Provides payment action methods.
 
-```tsx
-const {
-  init,
-  confirmPayment,
-  validate,
-  reset,
-  getSelectedPaymentMethod,
-  updateConfig,
-  updateorderId,
-  update,
-  submit,
-} = usePayconductorElement();
+```svelte
+<script>
+  const {
+    init,
+    confirmPayment,
+    validate,
+    reset,
+    getSelectedPaymentMethod,
+    updateConfig,
+    updateorderId,
+    update,
+    submit,
+  } = usePayconductorElement();
+</script>
 ```
 
 | Method | Signature | Description |
@@ -214,38 +216,7 @@ import type {
   PayConductorTheme,
   PayConductorConfig,
   PaymentConfirmData,
-  PixPaymentData,
-  CreditCardPaymentData,
-  BankSlipPaymentData,
-  NuPayPaymentData,
-  PicPayPaymentData,
-  CardPaymentData,
-  BillingDetails,
-} from '@payconductor-sdk-web/library-react';
-```
-
-## Payment Flow
-
-```
-1. <PayConductor publicKey="pk_xxx"> mounts
-   └─ Registers window.PayConductor, stores iframeUrl
-
-2. <PayConductorCheckoutElement /> mounts
-   └─ Reads iframeUrl, renders the iframe
-
-3. iframe loads → fetches payment methods → sends Ready
-   SDK receives Ready → sends config (theme, locale, paymentMethods)
-
-4. User selects payment method
-   └─ onPaymentMethodSelected fires
-   └─ getSelectedPaymentMethod() returns the chosen method
-
-5. User clicks "Checkout" (your button, outside the iframe)
-   └─ payconductor-sdk creates Draft order → returns orderId
-   └─ confirmPayment({ orderId })
-   └─ iframe collects form data → POST /orders/:id/confirm
-
-6. SDK receives PaymentComplete/Failed/Pending → callbacks fire
+} from '@payconductor-sdk-web/library-svelte';
 ```
 
 ## License

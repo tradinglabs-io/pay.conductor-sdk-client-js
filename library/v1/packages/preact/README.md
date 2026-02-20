@@ -1,28 +1,29 @@
-# @payconductor-sdk-web/library-react
+# @payconductor-sdk-web/library-preact
 
-React SDK for [PayConductor](https://payconductor.ai) payment integration.
+Preact SDK for [PayConductor](https://payconductor.ai) payment integration.
 
-[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-react.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-react)
+[![npm version](https://img.shields.io/npm/v/@payconductor-sdk-web/library-preact.svg?style=flat-square)](https://www.npmjs.com/package/@payconductor-sdk-web/library-preact)
 
 ## Requirements
 
-Minimum React version: **v16.8**.
+Minimum Preact version: **v10**.
 
 ## Installation
 
 ```bash
-npm install @payconductor-sdk-web/library-react payconductor-sdk
+npm install @payconductor-sdk-web/library-preact payconductor-sdk
 # or
-yarn add @payconductor-sdk-web/library-react payconductor-sdk
+yarn add @payconductor-sdk-web/library-preact payconductor-sdk
 # or
-pnpm add @payconductor-sdk-web/library-react payconductor-sdk
+pnpm add @payconductor-sdk-web/library-preact payconductor-sdk
 # or
-bun add @payconductor-sdk-web/library-react payconductor-sdk
+bun add @payconductor-sdk-web/library-preact payconductor-sdk
 ```
 
 ## Quick Start
 
 ```tsx
+import { useState } from 'preact/hooks';
 import {
   PayConductor,
   PayConductorCheckoutElement,
@@ -30,7 +31,7 @@ import {
   usePayconductorElement,
   type PaymentMethod,
   type PaymentResult,
-} from '@payconductor-sdk-web/library-react';
+} from '@payconductor-sdk-web/library-preact';
 import {
   AvailablePaymentMethods,
   Configuration,
@@ -120,6 +121,7 @@ export default function App() {
       debug={true}
       theme={{ primaryColor: '#0066ff', borderRadius: '8px' }}
       onReady={() => console.log('Ready')}
+      onError={(err) => console.error('Error:', err)}
       onPaymentComplete={(result: PaymentResult) => console.log('Complete:', result)}
       onPaymentMethodSelected={(method: PaymentMethod) => console.log('Method:', method)}
     >
@@ -133,7 +135,7 @@ export default function App() {
 
 ### `<PayConductor />`
 
-Provider component that initializes the payment session. **Does not render the iframe directly** — use `<PayConductorCheckoutElement>` for that.
+Provider component that initializes the payment session.
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -156,7 +158,7 @@ Provider component that initializes the payment session. **Does not render the i
 
 ### `<PayConductorCheckoutElement />`
 
-Renders the payment iframe. Place it inside `<PayConductor>` wherever you want the iframe in your layout.
+Renders the payment iframe. Place it inside `<PayConductor>`.
 
 | Prop | Type | Description |
 |------|------|-------------|
@@ -214,38 +216,7 @@ import type {
   PayConductorTheme,
   PayConductorConfig,
   PaymentConfirmData,
-  PixPaymentData,
-  CreditCardPaymentData,
-  BankSlipPaymentData,
-  NuPayPaymentData,
-  PicPayPaymentData,
-  CardPaymentData,
-  BillingDetails,
-} from '@payconductor-sdk-web/library-react';
-```
-
-## Payment Flow
-
-```
-1. <PayConductor publicKey="pk_xxx"> mounts
-   └─ Registers window.PayConductor, stores iframeUrl
-
-2. <PayConductorCheckoutElement /> mounts
-   └─ Reads iframeUrl, renders the iframe
-
-3. iframe loads → fetches payment methods → sends Ready
-   SDK receives Ready → sends config (theme, locale, paymentMethods)
-
-4. User selects payment method
-   └─ onPaymentMethodSelected fires
-   └─ getSelectedPaymentMethod() returns the chosen method
-
-5. User clicks "Checkout" (your button, outside the iframe)
-   └─ payconductor-sdk creates Draft order → returns orderId
-   └─ confirmPayment({ orderId })
-   └─ iframe collects form data → POST /orders/:id/confirm
-
-6. SDK receives PaymentComplete/Failed/Pending → callbacks fire
+} from '@payconductor-sdk-web/library-preact';
 ```
 
 ## License
