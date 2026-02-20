@@ -6,6 +6,14 @@ import {
 	usePayConductor,
 	usePayconductorElement,
 } from "@payconductor-sdk-web/library-qwik";
+import {
+	AvailablePaymentMethods,
+	Configuration,
+	DocumentType,
+	OrderApi,
+	type OrderCreateRequest,
+	type PaymentResult,
+} from "payconductor-sdk";
 
 export default component$(() => {
 	const { isReady, error } = usePayConductor();
@@ -22,47 +30,67 @@ export default component$(() => {
 		errorMessage.value = null;
 
 		try {
-			// 1. Crie o pedido no seu backend (Draft) para obter o orderId
-			const response = await fetch("http://localhost:3000/api/v1/orders", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					payment: {
-						paymentMethod: "Draft",
-						availablePaymentMethods: ["CreditCard", "Pix", "BankSlip"],
-					},
-				}),
+			// Create SDK client inside the handler (required for Qwik QRL serialization)
+			const config = new Configuration({
+				username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || "your_client_id",
+				password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || "your_client_secret",
 			});
-			const { id: orderId } = await response.json();
+			const orderApi = new OrderApi(config);
 
-			// 2. Confirme o pagamento com o orderId
-			const result = await confirmPayment({ orderId });
-			console.log("Resultado do pagamento:", result);
+			// 1. Create the Draft order via payconductor-sdk to get the orderId
+			const orderRequest: OrderCreateRequest = {
+				chargeAmount: 100.00,
+				clientIp: "0.0.0.0",
+				customer: {
+					documentNumber: "12345678900",
+					documentType: DocumentType.Cpf,
+					email: "customer@example.com",
+					name: "Customer Name",
+				},
+				discountAmount: 0,
+				externalId: `order-${Date.now()}`,
+				payment: {
+					paymentMethod: "Draft",
+					availablePaymentMethods: [
+						AvailablePaymentMethods.CreditCard,
+						AvailablePaymentMethods.Pix,
+						AvailablePaymentMethods.BankSlip,
+					],
+				},
+				shippingFee: 0,
+				taxFee: 0,
+			};
+
+			const { data: orderData } = await orderApi.orderCreate(orderRequest);
+
+			// 2. Confirm payment with the obtained orderId
+			const result: PaymentResult = await confirmPayment({ orderId: orderData.id });
+			console.log("Payment result:", result);
 
 			if (result.status === "succeeded") {
-				alert("Pagamento realizado com sucesso!");
+				alert("Payment successful!");
 			}
-		} catch (err: any) {
-			errorMessage.value = err.message || "Falha no pagamento";
+		} catch (err: unknown) {
+			errorMessage.value = err instanceof Error ? err.message : "Payment failed";
 		} finally {
 			isProcessing.value = false;
 		}
 	});
 
 	const handleReady = $(() => {
-		console.log("PayConductor pronto");
+		console.log("PayConductor ready");
 	});
 
 	const handleError = $((err: Error) => {
-		console.error("Erro:", err);
+		console.error("Error:", err);
 	});
 
-	const handlePaymentComplete = $((result: any) => {
-		console.log("Pagamento completo:", result);
+	const handlePaymentComplete = $((result: PaymentResult) => {
+		console.log("Payment complete:", result);
 	});
 
-	const handlePaymentMethodSelected = $((method: any) => {
-		console.log("Método selecionado:", method);
+	const handlePaymentMethodSelected = $((method: string) => {
+		console.log("Payment method selected:", method);
 		selectedMethod.value = method;
 	});
 
@@ -88,7 +116,7 @@ export default component$(() => {
 
 				{selectedMethod.value && (
 					<p style={{ margin: "12px 0", color: "#64748b" }}>
-						Método selecionado: <strong>{selectedMethod.value}</strong>
+						Selected method: <strong>{selectedMethod.value}</strong>
 					</p>
 				)}
 
@@ -109,7 +137,7 @@ export default component$(() => {
 					}}
 					type="button"
 				>
-					{isProcessing.value ? "Processando..." : "Finalizar compra"}
+					{isProcessing.value ? "Processing..." : "Checkout"}
 				</button>
 
 				{errorMessage.value && (
@@ -120,7 +148,7 @@ export default component$(() => {
 
 				{error && (
 					<div style={{ color: "#fa755a", marginTop: "16px" }}>
-						Erro: {error}
+						Error: {error}
 					</div>
 				)}
 			</PayConductor>

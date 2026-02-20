@@ -7,9 +7,22 @@
     type PaymentMethod,
     type PaymentResult,
   } from '@payconductor-sdk-web/library-svelte';
+  import {
+    AvailablePaymentMethods,
+    Configuration,
+    DocumentType,
+    OrderApi,
+    type OrderCreateRequest,
+  } from 'payconductor-sdk';
 
   const { isReady, error } = usePayConductor();
   const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
+
+  const sdkConfig = new Configuration({
+    username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || 'your_client_id',
+    password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || 'your_client_secret',
+  });
+  const orderApi = new OrderApi(sdkConfig);
 
   let errorMessage: string | null = null;
   let isProcessing = false;
@@ -23,39 +36,52 @@
     errorMessage = null;
 
     try {
-      // 1. Crie o pedido no seu backend (Draft) para obter o orderId
-      const response = await fetch('http://localhost:3000/api/v1/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payment: {
-            paymentMethod: 'Draft',
-            availablePaymentMethods: ['CreditCard', 'Pix', 'BankSlip'],
-          },
-        }),
-      });
-      const { id: orderId } = await response.json();
+      // 1. Create the Draft order via payconductor-sdk to get the orderId
+      const orderRequest: OrderCreateRequest = {
+        chargeAmount: 100.00,
+        clientIp: '0.0.0.0',
+        customer: {
+          documentNumber: '12345678900',
+          documentType: DocumentType.Cpf,
+          email: 'customer@example.com',
+          name: 'Customer Name',
+        },
+        discountAmount: 0,
+        externalId: `order-${Date.now()}`,
+        payment: {
+          paymentMethod: 'Draft',
+          availablePaymentMethods: [
+            AvailablePaymentMethods.CreditCard,
+            AvailablePaymentMethods.Pix,
+            AvailablePaymentMethods.BankSlip,
+          ],
+        },
+        shippingFee: 0,
+        taxFee: 0,
+      };
 
-      // 2. Confirme o pagamento com o orderId
-      const result: PaymentResult = await confirmPayment({ orderId });
-      console.log('Resultado do pagamento:', result);
+      const { data: orderData } = await orderApi.orderCreate(orderRequest);
+
+      // 2. Confirm payment with the obtained orderId
+      const result: PaymentResult = await confirmPayment({ orderId: orderData.id });
+      console.log('Payment result:', result);
 
       if (result.status === 'succeeded') {
-        alert('Pagamento realizado com sucesso!');
+        alert('Payment successful!');
       }
-    } catch (err: any) {
-      errorMessage = err.message || 'Falha no pagamento';
+    } catch (err: unknown) {
+      errorMessage = err instanceof Error ? err.message : 'Payment failed';
     } finally {
       isProcessing = false;
     }
   }
 
   function handlePaymentMethodSelected(method: PaymentMethod) {
-    console.log('Método de pagamento selecionado:', method);
+    console.log('Payment method selected:', method);
   }
 
   function handlePaymentComplete(result: PaymentResult) {
-    console.log('Pagamento completo:', result);
+    console.log('Payment complete:', result);
   }
 </script>
 
@@ -71,8 +97,8 @@
       fontFamily: 'Roboto, sans-serif',
       borderRadius: '8px',
     }}
-    onReady={() => console.log('PayConductor pronto')}
-    onError={(err) => console.error('Erro:', err)}
+    onReady={() => console.log('PayConductor ready')}
+    onError={(err) => console.error('Error:', err)}
     onPaymentComplete={handlePaymentComplete}
     onPaymentMethodSelected={handlePaymentMethodSelected}
   >
@@ -80,7 +106,7 @@
 
     {#if selectedMethod}
       <p style="margin: 12px 0; color: #64748b">
-        Método selecionado: <strong>{selectedMethod}</strong>
+        Selected method: <strong>{selectedMethod}</strong>
       </p>
     {/if}
 
@@ -90,7 +116,7 @@
       on:click={handleFinalize}
       style="width: 100%; padding: 16px; background-color: {$isReady ? '#0066ff' : '#cfd7df'}; color: #ffffff; border: none; border-radius: 8px; cursor: {$isReady ? 'pointer' : 'not-allowed'}; font-size: 16px; font-weight: 600; margin-top: 16px"
     >
-      {isProcessing ? 'Processando...' : 'Finalizar compra'}
+      {isProcessing ? 'Processing...' : 'Checkout'}
     </button>
 
     {#if errorMessage}
@@ -101,7 +127,7 @@
 
     {#if $error}
       <div style="color: #fa755a; margin-top: 16px">
-        Erro: {$error}
+        Error: {$error}
       </div>
     {/if}
   </PayConductor>

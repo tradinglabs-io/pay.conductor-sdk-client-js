@@ -40,21 +40,52 @@ import {
   type PaymentMethod,
   type PaymentResult,
 } from '@payconductor-sdk-web/library-react';
+import {
+  AvailablePaymentMethods,
+  Configuration,
+  DocumentType,
+  OrderApi,
+  type OrderCreateRequest,
+} from 'payconductor-sdk';
+
+const sdkConfig = new Configuration({
+  username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || 'your_client_id',
+  password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || 'your_client_secret',
+});
+const orderApi = new OrderApi(sdkConfig);
 
 function CheckoutForm() {
   const { isReady, error } = usePayConductor();
   const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
   const handleFinalize = async () => {
-    // 1. Create the Draft order in your backend to get the orderId
-    const response = await fetch('/api/orders', {
-      method: 'POST',
-      body: JSON.stringify({ payment: { paymentMethod: 'Draft' } }),
-    });
-    const { id: orderId } = await response.json();
+    // 1. Create the Draft order via payconductor-sdk to get the orderId
+    const orderRequest: OrderCreateRequest = {
+      chargeAmount: 100.00,
+      clientIp: '0.0.0.0',
+      customer: {
+        documentNumber: '12345678900',
+        documentType: DocumentType.Cpf,
+        email: 'customer@example.com',
+        name: 'Customer Name',
+      },
+      discountAmount: 0,
+      externalId: `order-${Date.now()}`,
+      payment: {
+        paymentMethod: 'Draft',
+        availablePaymentMethods: [
+          AvailablePaymentMethods.CreditCard,
+          AvailablePaymentMethods.Pix,
+          AvailablePaymentMethods.BankSlip,
+        ],
+      },
+      shippingFee: 0,
+      taxFee: 0,
+    };
+    const { data } = await orderApi.orderCreate(orderRequest);
 
-    // 2. Confirm payment with the orderId
-    const result: PaymentResult = await confirmPayment({ orderId });
+    // 2. Confirm payment with the obtained orderId
+    const result: PaymentResult = await confirmPayment({ orderId: data.id });
     console.log(result);
   };
 
@@ -62,9 +93,9 @@ function CheckoutForm() {
     <div>
       <PayConductorCheckoutElement height="600px" />
       <button onClick={handleFinalize} disabled={!isReady}>
-        Finalizar compra
+        Checkout
       </button>
-      {error && <div>Erro: {error}</div>}
+      {error && <div>Error: {error}</div>}
     </div>
   );
 }
@@ -99,24 +130,51 @@ function App() {
   >
     <PayConductorCheckoutElement height="600px" />
     <button @click="handleFinalize" :disabled="!isReady">
-      Finalizar compra
+      Checkout
     </button>
   </PayConductor>
 </template>
 
 <script setup>
 import { PayConductor, PayConductorCheckoutElement, usePayConductor, usePayconductorElement } from '@payconductor-sdk-web/library-vue';
+import { AvailablePaymentMethods, Configuration, DocumentType, OrderApi } from 'payconductor-sdk';
 
 const { isReady } = usePayConductor();
 const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
+const sdkConfig = new Configuration({
+  username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || 'your_client_id',
+  password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || 'your_client_secret',
+});
+const orderApi = new OrderApi(sdkConfig);
+
 const handleFinalize = async () => {
-  const response = await fetch('/api/orders', {
-    method: 'POST',
-    body: JSON.stringify({ payment: { paymentMethod: 'Draft' } }),
+  // 1. Create the Draft order via payconductor-sdk to get the orderId
+  const { data } = await orderApi.orderCreate({
+    chargeAmount: 100.00,
+    clientIp: '0.0.0.0',
+    customer: {
+      documentNumber: '12345678900',
+      documentType: DocumentType.Cpf,
+      email: 'customer@example.com',
+      name: 'Customer Name',
+    },
+    discountAmount: 0,
+    externalId: `order-${Date.now()}`,
+    payment: {
+      paymentMethod: 'Draft',
+      availablePaymentMethods: [
+        AvailablePaymentMethods.CreditCard,
+        AvailablePaymentMethods.Pix,
+        AvailablePaymentMethods.BankSlip,
+      ],
+    },
+    shippingFee: 0,
+    taxFee: 0,
   });
-  const { id: orderId } = await response.json();
-  await confirmPayment({ orderId });
+
+  // 2. Confirm payment with the obtained orderId
+  await confirmPayment({ orderId: data.id });
 };
 
 const onPaymentComplete = (result) => console.log(result);
@@ -134,17 +192,41 @@ const onPaymentMethodSelected = (method) => console.log(method);
     usePayConductor,
     usePayconductorElement,
   } from '@payconductor-sdk-web/library-svelte';
+  import { AvailablePaymentMethods, Configuration, DocumentType, OrderApi } from 'payconductor-sdk';
 
   const { isReady, error } = usePayConductor();
   const { confirmPayment, getSelectedPaymentMethod } = usePayconductorElement();
 
+  const sdkConfig = new Configuration({
+    username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || 'your_client_id',
+    password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || 'your_client_secret',
+  });
+  const orderApi = new OrderApi(sdkConfig);
+
   async function handleFinalize() {
-    const response = await fetch('/api/orders', {
-      method: 'POST',
-      body: JSON.stringify({ payment: { paymentMethod: 'Draft' } }),
+    const { data } = await orderApi.orderCreate({
+      chargeAmount: 100.00,
+      clientIp: '0.0.0.0',
+      customer: {
+        documentNumber: '12345678900',
+        documentType: DocumentType.Cpf,
+        email: 'customer@example.com',
+        name: 'Customer Name',
+      },
+      discountAmount: 0,
+      externalId: `order-${Date.now()}`,
+      payment: {
+        paymentMethod: 'Draft',
+        availablePaymentMethods: [
+          AvailablePaymentMethods.CreditCard,
+          AvailablePaymentMethods.Pix,
+          AvailablePaymentMethods.BankSlip,
+        ],
+      },
+      shippingFee: 0,
+      taxFee: 0,
     });
-    const { id: orderId } = await response.json();
-    const result = await confirmPayment({ orderId });
+    const result = await confirmPayment({ orderId: data.id });
     console.log(result);
   }
 </script>
@@ -159,7 +241,7 @@ const onPaymentMethodSelected = (method) => console.log(method);
 >
   <PayConductorCheckoutElement height="600px" />
   <button on:click={handleFinalize} disabled={!$isReady}>
-    Finalizar compra
+    Checkout
   </button>
 </PayConductor>
 ```

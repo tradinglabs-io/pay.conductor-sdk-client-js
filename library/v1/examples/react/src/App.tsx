@@ -6,7 +6,21 @@ import {
 	usePayConductor,
 	usePayconductorElement,
 } from "@payconductor-sdk-web/library-react";
+import {
+	AvailablePaymentMethods,
+	Configuration,
+	DocumentType,
+	OrderApi,
+	type OrderCreateRequest,
+} from "payconductor-sdk";
 import { useState } from "react";
+
+const sdkConfig = new Configuration({
+	username: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_ID || "your_client_id",
+	password: import.meta.env.VITE_PAYCONDUCTOR_CLIENT_SECRET || "your_client_secret",
+});
+
+const orderApi = new OrderApi(sdkConfig);
 
 function CheckoutForm() {
 	const { isReady, error } = usePayConductor();
@@ -22,28 +36,42 @@ function CheckoutForm() {
 		setErrorMessage(null);
 
 		try {
-			// 1. Crie o pedido no seu backend (Draft) para obter o orderId
-			const response = await fetch("http://localhost:3000/api/v1/orders", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					payment: {
-						paymentMethod: "Draft",
-						availablePaymentMethods: ["CreditCard", "Pix", "BankSlip"],
-					},
-				}),
-			});
-			const { id: orderId } = await response.json();
+			// 1. Create the Draft order via payconductor-sdk to get the orderId
+			const orderRequest: OrderCreateRequest = {
+				chargeAmount: 100.00,
+				clientIp: "0.0.0.0",
+				customer: {
+					documentNumber: "12345678900",
+					documentType: DocumentType.Cpf,
+					email: "customer@example.com",
+					name: "Customer Name",
+				},
+				discountAmount: 0,
+				externalId: `order-${Date.now()}`,
+				payment: {
+					paymentMethod: "Draft",
+					availablePaymentMethods: [
+						AvailablePaymentMethods.CreditCard,
+						AvailablePaymentMethods.Pix,
+						AvailablePaymentMethods.BankSlip,
+					],
+				},
+				shippingFee: 0,
+				taxFee: 0,
+			};
 
-			// 2. Confirme o pagamento com o orderId
-			const result: PaymentResult = await confirmPayment({ orderId });
-			console.log("Resultado do pagamento:", result);
+			const { data: orderData } = await orderApi.orderCreate(orderRequest);
+
+			// 2. Confirm payment with the obtained orderId
+			const result: PaymentResult = await confirmPayment({ orderId: orderData.id });
+			console.log("Payment result:", result);
 
 			if (result.status === "succeeded") {
-				alert("Pagamento realizado com sucesso!");
+				alert("Payment successful!");
 			}
-		} catch (err: any) {
-			setErrorMessage(err.message || "Falha no pagamento");
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : "Payment failed";
+			setErrorMessage(message);
 		} finally {
 			setIsProcessing(false);
 		}
@@ -57,7 +85,7 @@ function CheckoutForm() {
 
 			{selectedMethod && (
 				<p style={{ margin: "12px 0", color: "#64748b" }}>
-					Método selecionado: <strong>{selectedMethod}</strong>
+					Selected method: <strong>{selectedMethod}</strong>
 				</p>
 			)}
 
@@ -78,7 +106,7 @@ function CheckoutForm() {
 				}}
 				type="button"
 			>
-				{isProcessing ? "Processando..." : "Finalizar compra"}
+				{isProcessing ? "Processing..." : "Checkout"}
 			</button>
 
 			{errorMessage && (
@@ -86,7 +114,7 @@ function CheckoutForm() {
 			)}
 
 			{error && (
-				<div style={{ color: "#fa755a", marginTop: "16px" }}>Erro: {error}</div>
+				<div style={{ color: "#fa755a", marginTop: "16px" }}>Error: {error}</div>
 			)}
 		</div>
 	);
@@ -94,11 +122,11 @@ function CheckoutForm() {
 
 export default function App() {
 	const handlePaymentMethodSelected = (method: PaymentMethod) => {
-		console.log("Método de pagamento selecionado:", method);
+		console.log("Payment method selected:", method);
 	};
 
 	const handlePaymentComplete = (result: PaymentResult) => {
-		console.log("Pagamento completo:", result);
+		console.log("Payment complete:", result);
 	};
 
 	return (
@@ -108,10 +136,10 @@ export default function App() {
 			<PayConductor
 				debug={true}
 				locale="pt-BR"
-				onError={(err) => console.error("Erro:", err)}
+				onError={(err) => console.error("Error:", err)}
 				onPaymentComplete={handlePaymentComplete}
 				onPaymentMethodSelected={handlePaymentMethodSelected}
-				onReady={() => console.log("PayConductor pronto")}
+				onReady={() => console.log("PayConductor ready")}
 				publicKey="pk_test_123"
 				theme={{
 					primaryColor: "#0066ff",
