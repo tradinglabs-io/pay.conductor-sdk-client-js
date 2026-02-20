@@ -1,4 +1,4 @@
-# PayConductor SDK Client JS
+# PayConductor SDK Web
 
 A unified payment SDK that provides seamless integration with PayConductor's payment iframe across multiple JavaScript frameworks.
 
