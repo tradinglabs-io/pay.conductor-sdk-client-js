@@ -177,7 +177,7 @@ class PayConductor extends HTMLElement {
         validatePayment(self._iframeRef, this.state.pendingMap, data),
       reset: () => resetPayment(self._iframeRef, this.state.pendingMap),
     };
-    window.__PAY_CONDUCTOR__ = {
+    window.PayConductor = {
       frame,
       config,
       api,

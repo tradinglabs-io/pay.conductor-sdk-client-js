@@ -81,7 +81,7 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
         validatePayment(iframeRef.value, state.pendingMap, data),
       reset: () => resetPayment(iframeRef.value, state.pendingMap),
     };
-    window.__PAY_CONDUCTOR__ = {
+    window.PayConductor = {
       frame,
       config,
       api,

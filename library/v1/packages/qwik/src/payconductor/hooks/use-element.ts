@@ -25,7 +25,7 @@ export interface UseElementReturn extends PayConductorApi {
   confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
 }
 export function useElement(): UseElementReturn {
-  const ctx = typeof window !== "undefined" ? window.__PAY_CONDUCTOR__ : null;
+  const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const getIframe = () => {
     if (!ctx?.frame?.iframe) return null;
     const iframeRef = ctx.frame.iframe as {

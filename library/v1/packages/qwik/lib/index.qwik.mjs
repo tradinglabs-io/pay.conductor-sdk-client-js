@@ -172,7 +172,7 @@ const PayConductor = /* @__PURE__ */ componentQrl(/* @__PURE__ */ inlinedQrl((pr
       validate: (data) => validatePayment(iframeRef2.value, state2.pendingMap, data),
       reset: () => resetPayment(iframeRef2.value, state2.pendingMap)
     };
-    window.__PAY_CONDUCTOR__ = {
+    window.PayConductor = {
       frame,
       config,
       api
@@ -229,7 +229,7 @@ const PayConductor = /* @__PURE__ */ componentQrl(/* @__PURE__ */ inlinedQrl((pr
   ], 1, "yV_2");
 }, "PayConductor_component_Z7pfAdPFFAM"));
 function usePayConductor() {
-  const ctx = typeof window !== "undefined" ? window.__PAY_CONDUCTOR__ : null;
+  const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const config = ctx?.config ? {
     publicKey: ctx.config.publicKey,
     intentToken: ctx.config.intentToken,
@@ -251,7 +251,7 @@ function usePayConductor() {
   };
 }
 function useElement() {
-  const ctx = typeof window !== "undefined" ? window.__PAY_CONDUCTOR__ : null;
+  const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const getIframe = () => {
     if (!ctx?.frame?.iframe)
       return null;

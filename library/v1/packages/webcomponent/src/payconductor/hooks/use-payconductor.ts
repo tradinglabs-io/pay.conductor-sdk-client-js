@@ -1,7 +1,7 @@
 import { PayConductorConfig, PayConductorFrame } from "../types";
 type UsePayConductorReturn = PayConductorFrame & Partial<PayConductorConfig>;
 export function usePayConductor(): UsePayConductorReturn {
-  const ctx = typeof window !== 'undefined' ? window.__PAY_CONDUCTOR__ : null;
+  const ctx = typeof window !== 'undefined' ? window.PayConductor : null;
   const config = ctx?.config ? {
     publicKey: ctx.config.publicKey,
     intentToken: ctx.config.intentToken,

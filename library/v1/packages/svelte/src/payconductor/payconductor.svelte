@@ -95,7 +95,7 @@
       validate: (data: any) => validatePayment(iframeRef, pendingMap, data),
       reset: () => resetPayment(iframeRef, pendingMap),
     };
-    window.__PAY_CONDUCTOR__ = {
+    window.PayConductor = {
       frame,
       config,
       api,

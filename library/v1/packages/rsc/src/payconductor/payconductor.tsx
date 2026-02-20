@@ -87,7 +87,7 @@ function PayConductor(props: PayConductorEmbedProps) {
         validatePayment(iframeRef.current, pendingMap, data),
       reset: () => resetPayment(iframeRef.current, pendingMap),
     };
-    window.__PAY_CONDUCTOR__ = {
+    window.PayConductor = {
       frame,
       config,
       api,

@@ -115,7 +115,7 @@ export default defineComponent({
         validatePayment(this.$refs.iframeRef, this.pendingMap, data),
       reset: () => resetPayment(this.$refs.iframeRef, this.pendingMap),
     };
-    window.__PAY_CONDUCTOR__ = {
+    window.PayConductor = {
       frame,
       config,
       api,

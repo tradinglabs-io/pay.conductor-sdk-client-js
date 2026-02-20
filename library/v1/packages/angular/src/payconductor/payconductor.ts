@@ -131,7 +131,7 @@ export default class PayConductor {
         reset: () =>
           resetPayment(this.iframeRef?.nativeElement, this.pendingMap),
       };
-      window.__PAY_CONDUCTOR__ = {
+      window.PayConductor = {
         frame,
         config,
         api,

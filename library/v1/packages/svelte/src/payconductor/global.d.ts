@@ -1,6 +1,6 @@
 import { PayConductorContextValue } from "./types";
 export interface PayConductorWindow {
-  __PAY_CONDUCTOR__: PayConductorContextValue | null;
+  PayConductor: PayConductorContextValue | null;
 }
 declare global {
   interface Window extends PayConductorWindow {}
