@@ -24,12 +24,12 @@ async function run() {
 		default: "v1",
 	});
 
-	const destPath = `library/${version}/src/payconductor`;
+	const destPath = `library/${version}/src/payconductor/iframe`;
 
 	console.log(`Syncing types and constants from ${baseURL} to ${destPath}...`);
 
-	await download(`${baseURL}/types.ts`, `${destPath}/iframe-types.ts`);
-	await download(`${baseURL}/constants.ts`, `${destPath}/iframe-constants.ts`);
+	await download(`${baseURL}/shared/types.ts`, `${destPath}/types.ts`);
+	await download(`${baseURL}/shared/constants.ts`, `${destPath}/constants.ts`);
 
 	console.log("Sync completed successfully.");
 }
