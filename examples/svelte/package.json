@@ -1,6 +1,5 @@
 {
   "name": "@payconductor-sdk-web/example-svelte",
-  "private": true,
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

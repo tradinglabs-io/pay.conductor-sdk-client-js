@@ -1,6 +1,5 @@
 {
   "name": "@payconductor-sdk-web/example-react",
-  "private": true,
   "scripts": {
     "build": "tsc && vite build",
     "dev": "vite",

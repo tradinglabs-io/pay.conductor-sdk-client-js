@@ -1,6 +1,5 @@
 {
   "name": "@payconductor-sdk-web/library",
-  "private": false,
   "scripts": {
     "start": "watch \"npm run build\" ./src",
     "clean:src": "node scripts/clean-src.js",

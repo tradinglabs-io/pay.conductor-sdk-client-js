@@ -1,6 +1,5 @@
 {
   "name": "@payconductor-sdk-web/example-qwik",
-  "private": true,
   "trustedDependencies": [
     "sharp"
   ],
