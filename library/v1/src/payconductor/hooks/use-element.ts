@@ -31,7 +31,7 @@ export type UpdateOptions = {
 	address?: Partial<BillingDetails["address"]>;
 };
 
-export interface UseElementReturn {
+export interface UsePayconductorElementReturn {
 	init: (config: PayConductorConfig) => Promise<void>;
 	confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
 	validate: (data: unknown) => Promise<boolean>;
@@ -60,7 +60,7 @@ function getIframeFromContext(ctx: typeof window.PayConductor): HTMLIFrameElemen
 	return null;
 }
 
-export function useElement(): UseElementReturn {
+export function usePayconductorElement(): UsePayconductorElementReturn {
 	const ctx = typeof window !== "undefined" ? window.PayConductor : null;
 
 	const sendToIframe = (type: string, data?: unknown) => {

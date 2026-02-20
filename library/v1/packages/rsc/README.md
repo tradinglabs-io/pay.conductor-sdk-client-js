@@ -118,6 +118,7 @@ export default function CheckoutPage() {
         theme={{ primaryColor: "#0066ff" }}
         locale="en-US"
         height="500px"
+        debug={true}
         onReady={() => console.log("Ready")}
         onError={(err) => console.error(err)}
         onPaymentComplete={(result) => console.log(result)}
@@ -170,6 +171,7 @@ Client-side component that initializes the payment iframe. Marked with `"use cli
 | `theme` | `PayConductorTheme` | Theme configuration |
 | `locale` | `string` | Locale (e.g., 'en-US', 'pt-BR') |
 | `height` | `string` | Iframe height (default: '500px') |
+| `debug` | `boolean` | Enable debug mode with prefixed console.log for key events |
 | `onReady` | `() => void` | Callback when iframe is ready |
 | `onError` | `(error: Error) => void` | Error callback |
 | `onPaymentComplete` | `(result: PaymentResult) => void` | Payment complete callback |

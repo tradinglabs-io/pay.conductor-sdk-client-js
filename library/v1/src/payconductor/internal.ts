@@ -78,7 +78,6 @@ export function sendConfig(
 	pendingMap: Map<string, PendingRequest> | null,
 	config: Pick<
 		PayConductorConfig,
-		| "intentToken"
 		| "theme"
 		| "locale"
 		| "paymentMethods"
