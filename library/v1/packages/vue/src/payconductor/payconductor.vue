@@ -3,31 +3,16 @@
     class="payconductor"
     id="payconductor"
     :style="{
-      width: '100%',
-      position: 'relative',
+      display: 'contents',
     }"
   >
     <slot />
-    <template v-if="isLoaded">
-      <iframe
-        allow="payment"
-        title="PayConductor"
-        ref="iframeRef"
-        :src="iframeUrl"
-        :style="{
-          width: '100%',
-          height: height || IFRAME_DEFAULT_HEIGHT_VALUE,
-          border: 'none',
-        }"
-      ></iframe>
-    </template>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
 
-import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
 import type {
   PayConductorConfig,
   PaymentMethod,
@@ -49,10 +34,11 @@ import type {
 } from "./types";
 import { buildIframeUrl } from "./utils";
 
-export interface PayConductorEmbedProps extends PayConductorConfig {
-  height?: string;
+export interface PayConductorEmbedProps
+  extends Omit<PayConductorConfig, "intentToken"> {
   children?: any;
   showActionButtons?: boolean;
+  debug?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
@@ -65,8 +51,8 @@ export default defineComponent({
   name: "pay-conductor",
 
   props: [
+    "debug",
     "publicKey",
-    "intentToken",
     "theme",
     "locale",
     "paymentMethods",
@@ -79,7 +65,6 @@ export default defineComponent({
     "onPaymentFailed",
     "onPaymentPending",
     "onPaymentMethodSelected",
-    "height",
   ],
 
   data() {
@@ -91,18 +76,39 @@ export default defineComponent({
       pendingMap: null,
       selectedPaymentMethod: null,
       configSent: false,
-      IFRAME_DEFAULT_HEIGHT_VALUE,
     };
   },
 
   mounted() {
-    this.iframeUrl = buildIframeUrl({
+    const log = (...args: any[]) => {
+      if (this.debug) {
+        console.log("[PayConductor]", ...args);
+      }
+    };
+    log("SDK initializing", {
       publicKey: this.publicKey,
     });
+    const iframeUrl = buildIframeUrl({
+      publicKey: this.publicKey,
+    });
+    this.iframeUrl = iframeUrl;
     this.isLoaded = true;
     this.pendingMap = createPendingRequestsMap();
+    log("iframeUrl built:", iframeUrl);
+    log("pendingMap created");
+    const getIframe = (): HTMLIFrameElement | undefined => {
+      const ref = window.PayConductor?.frame?.iframe;
+      if (!ref) return undefined;
+      if (ref instanceof HTMLIFrameElement) return ref;
+      if (typeof ref === "object" && ref !== null) {
+        if ("current" in ref) return (ref as any).current ?? undefined;
+        if ("value" in ref) return (ref as any).value ?? undefined;
+      }
+      return ref as HTMLIFrameElement;
+    };
     const frame: PayConductorFrame = {
-      iframe: this.$refs.iframeRef,
+      iframe: null,
+      iframeUrl,
       get isReady() {
         return this.isReady;
       },
@@ -112,18 +118,26 @@ export default defineComponent({
     };
     const config: PayConductorConfig = {
       publicKey: this.publicKey,
-      intentToken: this.intentToken,
       theme: this.theme,
       locale: this.locale,
       paymentMethods: this.paymentMethods,
       defaultPaymentMethod: this.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      confirmPayment: (options: { intentToken: string }) =>
-        confirmPayment(this.$refs.iframeRef, this.pendingMap, options),
-      validate: (data: unknown) =>
-        validatePayment(this.$refs.iframeRef, this.pendingMap, data),
-      reset: () => resetPayment(this.$refs.iframeRef, this.pendingMap),
+      confirmPayment: (options: { intentToken: string }) => {
+        log("confirmPayment called", {
+          intentToken: options.intentToken,
+        });
+        return confirmPayment(getIframe(), this.pendingMap, options);
+      },
+      validate: (data: unknown) => {
+        log("validate called", data);
+        return validatePayment(getIframe(), this.pendingMap, data);
+      },
+      reset: () => {
+        log("reset called");
+        return resetPayment(getIframe(), this.pendingMap);
+      },
       getSelectedPaymentMethod: () => this.selectedPaymentMethod,
     };
     window.PayConductor = {
@@ -132,11 +146,23 @@ export default defineComponent({
       api,
       selectedPaymentMethod: this.selectedPaymentMethod,
     };
+    log("window.PayConductor registered");
     const sendConfigToIframe = async () => {
-      if (!this.configSent && this.$refs.iframeRef) {
+      if (!this.configSent) {
+        const iframe = getIframe();
+        if (!iframe) {
+          log("sendConfigToIframe: iframe not found, skipping");
+          return;
+        }
         this.configSent = true;
-        sendConfig(this.$refs.iframeRef, this.pendingMap, {
-          intentToken: this.intentToken,
+        log("sendConfig →", {
+          theme: this.theme,
+          locale: this.locale,
+          paymentMethods: this.paymentMethods,
+          defaultPaymentMethod: this.defaultPaymentMethod,
+          showPaymentButtons: this.showPaymentButtons,
+        });
+        sendConfig(iframe, this.pendingMap, {
           theme: this.theme,
           locale: this.locale,
           paymentMethods: this.paymentMethods,
@@ -153,18 +179,36 @@ export default defineComponent({
         (val) => {
           this.isReady = val;
           if (val) {
+            log("iframe Ready — sending config");
             sendConfigToIframe();
           }
         },
         (val) => {
           this.error = val;
+          log("iframe Error:", val);
         },
-        this.onReady,
-        this.onError,
-        (data) => this.onPaymentComplete?.(data as PaymentResult),
-        (data) => this.onPaymentFailed?.(data as PaymentResult),
-        (data) => this.onPaymentPending?.(data as PaymentResult),
+        () => {
+          log("onReady fired");
+          this.onReady?.();
+        },
+        (err) => {
+          log("onError fired:", err);
+          this.onError?.(err);
+        },
+        (data) => {
+          log("PaymentComplete:", data);
+          this.onPaymentComplete?.(data as PaymentResult);
+        },
+        (data) => {
+          log("PaymentFailed:", data);
+          this.onPaymentFailed?.(data as PaymentResult);
+        },
+        (data) => {
+          log("PaymentPending:", data);
+          this.onPaymentPending?.(data as PaymentResult);
+        },
         (method) => {
+          log("PaymentMethodSelected:", method);
           this.selectedPaymentMethod = method;
           if (window.PayConductor) {
             window.PayConductor.selectedPaymentMethod = method;
@@ -174,6 +218,7 @@ export default defineComponent({
       );
     };
     window.addEventListener("message", eventHandler);
+    log("SDK initialized — waiting for PayConductorCheckoutElement");
   },
 });
 </script>

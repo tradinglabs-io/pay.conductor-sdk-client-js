@@ -1,6 +1,6 @@
 {
   "name": "@payconductor-sdk-web/library-react",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "React SDK for PayConductor",
   "type": "module",
   "main": "dist/index.cjs.js",

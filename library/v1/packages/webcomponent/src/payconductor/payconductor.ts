@@ -1,7 +1,8 @@
-export interface PayConductorEmbedProps extends PayConductorConfig {
-  height?: string;
+export interface PayConductorEmbedProps
+  extends Omit<PayConductorConfig, "intentToken"> {
   children?: any;
   showActionButtons?: boolean;
+  debug?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
@@ -10,7 +11,6 @@ export interface PayConductorEmbedProps extends PayConductorConfig {
   onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 
-import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
 import type {
   PayConductorConfig,
   PaymentMethod,
@@ -39,10 +39,6 @@ import { buildIframeUrl } from "./utils";
  *
  */
 class PayConductor extends HTMLElement {
-  get _iframeRef() {
-    return this._root.querySelector("[data-ref='PayConductor-iframeRef']");
-  }
-
   get _root() {
     return this.shadowRoot || this;
   }
@@ -65,8 +61,8 @@ class PayConductor extends HTMLElement {
     }
 
     this.componentProps = [
+      "debug",
       "publicKey",
-      "intentToken",
       "theme",
       "locale",
       "paymentMethods",
@@ -80,7 +76,6 @@ class PayConductor extends HTMLElement {
       "onPaymentPending",
       "onPaymentMethodSelected",
       "children",
-      "height",
     ];
 
     // used to keep track of all nodes created by show/for
@@ -116,14 +111,6 @@ class PayConductor extends HTMLElement {
     this._root.innerHTML = `
       <div class="payconductor" id="payconductor" data-el="div-pay-conductor-1">
         <slot></slot>
-        <template data-el="show-pay-conductor">
-          <iframe
-            allow="payment"
-            title="PayConductor"
-            data-el="iframe-pay-conductor-1"
-            data-ref="PayConductor-iframeRef"
-          ></iframe>
-        </template>
       </div>`;
     this.pendingUpdate = true;
 
@@ -133,38 +120,40 @@ class PayConductor extends HTMLElement {
     this.update();
   }
 
-  showContent(el) {
-    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement/content
-    // grabs the content of a node that is between <template> tags
-    // iterates through child nodes to register all content including text elements
-    // attaches the content after the template
-
-    const elementFragment = el.content.cloneNode(true);
-    const children = Array.from(elementFragment.childNodes);
-    children.forEach((child) => {
-      if (el?.scope) {
-        child.scope = el.scope;
-      }
-      if (el?.context) {
-        child.context = el.context;
-      }
-      this.nodesToDestroy.push(child);
-    });
-    el.after(elementFragment);
-  }
-
   onMount() {
     // onMount
-    this.state.iframeUrl = buildIframeUrl({
+    const log = (...args: any[]) => {
+      if (this.props.debug) {
+        console.log("[PayConductor]", ...args);
+      }
+    };
+    log("SDK initializing", {
       publicKey: this.props.publicKey,
     });
+    const iframeUrl = buildIframeUrl({
+      publicKey: this.props.publicKey,
+    });
+    this.state.iframeUrl = iframeUrl;
     this.update();
     this.state.isLoaded = true;
     this.update();
     this.state.pendingMap = createPendingRequestsMap();
     this.update();
+    log("iframeUrl built:", iframeUrl);
+    log("pendingMap created");
+    const getIframe = (): HTMLIFrameElement | undefined => {
+      const ref = window.PayConductor?.frame?.iframe;
+      if (!ref) return undefined;
+      if (ref instanceof HTMLIFrameElement) return ref;
+      if (typeof ref === "object" && ref !== null) {
+        if ("current" in ref) return (ref as any).current ?? undefined;
+        if ("value" in ref) return (ref as any).value ?? undefined;
+      }
+      return ref as HTMLIFrameElement;
+    };
     const frame: PayConductorFrame = {
-      iframe: self._iframeRef,
+      iframe: null,
+      iframeUrl,
       get isReady() {
         return this.state.isReady;
       },
@@ -174,18 +163,26 @@ class PayConductor extends HTMLElement {
     };
     const config: PayConductorConfig = {
       publicKey: this.props.publicKey,
-      intentToken: this.props.intentToken,
       theme: this.props.theme,
       locale: this.props.locale,
       paymentMethods: this.props.paymentMethods,
       defaultPaymentMethod: this.props.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      confirmPayment: (options: { intentToken: string }) =>
-        confirmPayment(self._iframeRef, this.state.pendingMap, options),
-      validate: (data: unknown) =>
-        validatePayment(self._iframeRef, this.state.pendingMap, data),
-      reset: () => resetPayment(self._iframeRef, this.state.pendingMap),
+      confirmPayment: (options: { intentToken: string }) => {
+        log("confirmPayment called", {
+          intentToken: options.intentToken,
+        });
+        return confirmPayment(getIframe(), this.state.pendingMap, options);
+      },
+      validate: (data: unknown) => {
+        log("validate called", data);
+        return validatePayment(getIframe(), this.state.pendingMap, data);
+      },
+      reset: () => {
+        log("reset called");
+        return resetPayment(getIframe(), this.state.pendingMap);
+      },
       getSelectedPaymentMethod: () => this.state.selectedPaymentMethod,
     };
     window.PayConductor = {
@@ -194,12 +191,24 @@ class PayConductor extends HTMLElement {
       api,
       selectedPaymentMethod: this.state.selectedPaymentMethod,
     };
+    log("window.PayConductor registered");
     const sendConfigToIframe = async () => {
-      if (!this.state.configSent && self._iframeRef) {
+      if (!this.state.configSent) {
+        const iframe = getIframe();
+        if (!iframe) {
+          log("sendConfigToIframe: iframe not found, skipping");
+          return;
+        }
         this.state.configSent = true;
         this.update();
-        sendConfig(self._iframeRef, this.state.pendingMap, {
-          intentToken: this.props.intentToken,
+        log("sendConfig →", {
+          theme: this.props.theme,
+          locale: this.props.locale,
+          paymentMethods: this.props.paymentMethods,
+          defaultPaymentMethod: this.props.defaultPaymentMethod,
+          showPaymentButtons: this.props.showPaymentButtons,
+        });
+        sendConfig(iframe, this.state.pendingMap, {
           theme: this.props.theme,
           locale: this.props.locale,
           paymentMethods: this.props.paymentMethods,
@@ -217,19 +226,37 @@ class PayConductor extends HTMLElement {
           this.state.isReady = val;
           this.update();
           if (val) {
+            log("iframe Ready — sending config");
             sendConfigToIframe();
           }
         },
         (val) => {
           this.state.error = val;
           this.update();
+          log("iframe Error:", val);
         },
-        this.props.onReady,
-        this.props.onError,
-        (data) => this.props.onPaymentComplete?.(data as PaymentResult),
-        (data) => this.props.onPaymentFailed?.(data as PaymentResult),
-        (data) => this.props.onPaymentPending?.(data as PaymentResult),
+        () => {
+          log("onReady fired");
+          this.props.onReady?.();
+        },
+        (err) => {
+          log("onError fired:", err);
+          this.props.onError?.(err);
+        },
+        (data) => {
+          log("PaymentComplete:", data);
+          this.props.onPaymentComplete?.(data as PaymentResult);
+        },
+        (data) => {
+          log("PaymentFailed:", data);
+          this.props.onPaymentFailed?.(data as PaymentResult);
+        },
+        (data) => {
+          log("PaymentPending:", data);
+          this.props.onPaymentPending?.(data as PaymentResult);
+        },
         (method) => {
+          log("PaymentMethodSelected:", method);
           this.state.selectedPaymentMethod = method;
           this.update();
           if (window.PayConductor) {
@@ -240,6 +267,7 @@ class PayConductor extends HTMLElement {
       );
     };
     window.addEventListener("message", eventHandler);
+    log("SDK initialized — waiting for PayConductorCheckoutElement");
   }
 
   onUpdate() {}
@@ -265,28 +293,7 @@ class PayConductor extends HTMLElement {
       .querySelectorAll("[data-el='div-pay-conductor-1']")
       .forEach((el) => {
         Object.assign(el.style, {
-          width: "100%",
-          position: "relative",
-        });
-      });
-
-    this._root
-      .querySelectorAll("[data-el='show-pay-conductor']")
-      .forEach((el) => {
-        const whenCondition = this.state.isLoaded;
-        if (whenCondition) {
-          this.showContent(el);
-        }
-      });
-
-    this._root
-      .querySelectorAll("[data-el='iframe-pay-conductor-1']")
-      .forEach((el) => {
-        el.setAttribute("src", this.state.iframeUrl);
-        Object.assign(el.style, {
-          width: "100%",
-          height: this.props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
-          border: "none",
+          display: "contents",
         });
       });
   }

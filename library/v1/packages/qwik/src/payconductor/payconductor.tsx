@@ -1,5 +1,3 @@
-import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
-
 import {
   PayConductorConfig,
   PaymentMethod,
@@ -29,15 +27,15 @@ import {
   Slot,
   component$,
   h,
-  useSignal,
   useStore,
   useVisibleTask$,
 } from "@builder.io/qwik";
 
-export interface PayConductorEmbedProps extends PayConductorConfig {
-  height?: string;
+export interface PayConductorEmbedProps
+  extends Omit<PayConductorConfig, "intentToken"> {
   children?: any;
   showActionButtons?: boolean;
+  debug?: boolean;
   onReady?: () => void;
   onError?: (error: Error) => void;
   onPaymentComplete?: (result: PaymentResult) => void;
@@ -46,7 +44,6 @@ export interface PayConductorEmbedProps extends PayConductorConfig {
   onPaymentMethodSelected?: (method: PaymentMethod) => void;
 }
 export const PayConductor = component$((props: PayConductorEmbedProps) => {
-  const iframeRef = useSignal<Element>();
   const state = useStore<any>({
     configSent: false,
     error: null,
@@ -57,13 +54,35 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
     selectedPaymentMethod: null,
   });
   useVisibleTask$(() => {
-    state.iframeUrl = buildIframeUrl({
+    const log = (...args: any[]) => {
+      if (props.debug) {
+        console.log("[PayConductor]", ...args);
+      }
+    };
+    log("SDK initializing", {
       publicKey: props.publicKey,
     });
+    const iframeUrl = buildIframeUrl({
+      publicKey: props.publicKey,
+    });
+    state.iframeUrl = iframeUrl;
     state.isLoaded = true;
     state.pendingMap = createPendingRequestsMap();
+    log("iframeUrl built:", iframeUrl);
+    log("pendingMap created");
+    const getIframe = (): HTMLIFrameElement | undefined => {
+      const ref = window.PayConductor?.frame?.iframe;
+      if (!ref) return undefined;
+      if (ref instanceof HTMLIFrameElement) return ref;
+      if (typeof ref === "object" && ref !== null) {
+        if ("current" in ref) return (ref as any).current ?? undefined;
+        if ("value" in ref) return (ref as any).value ?? undefined;
+      }
+      return ref as HTMLIFrameElement;
+    };
     const frame: PayConductorFrame = {
-      iframe: iframeRef,
+      iframe: null,
+      iframeUrl,
       get isReady() {
         return state.isReady;
       },
@@ -73,18 +92,26 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
     };
     const config: PayConductorConfig = {
       publicKey: props.publicKey,
-      intentToken: props.intentToken,
       theme: props.theme,
       locale: props.locale,
       paymentMethods: props.paymentMethods,
       defaultPaymentMethod: props.defaultPaymentMethod,
     };
     const api: PayConductorApi = {
-      confirmPayment: (options: { intentToken: string }) =>
-        confirmPayment(iframeRef.value, state.pendingMap, options),
-      validate: (data: unknown) =>
-        validatePayment(iframeRef.value, state.pendingMap, data),
-      reset: () => resetPayment(iframeRef.value, state.pendingMap),
+      confirmPayment: (options: { intentToken: string }) => {
+        log("confirmPayment called", {
+          intentToken: options.intentToken,
+        });
+        return confirmPayment(getIframe(), state.pendingMap, options);
+      },
+      validate: (data: unknown) => {
+        log("validate called", data);
+        return validatePayment(getIframe(), state.pendingMap, data);
+      },
+      reset: () => {
+        log("reset called");
+        return resetPayment(getIframe(), state.pendingMap);
+      },
       getSelectedPaymentMethod: () => state.selectedPaymentMethod,
     };
     window.PayConductor = {
@@ -93,11 +120,23 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       api,
       selectedPaymentMethod: state.selectedPaymentMethod,
     };
+    log("window.PayConductor registered");
     const sendConfigToIframe = async () => {
-      if (!state.configSent && iframeRef.value) {
+      if (!state.configSent) {
+        const iframe = getIframe();
+        if (!iframe) {
+          log("sendConfigToIframe: iframe not found, skipping");
+          return;
+        }
         state.configSent = true;
-        sendConfig(iframeRef.value, state.pendingMap, {
-          intentToken: props.intentToken,
+        log("sendConfig →", {
+          theme: props.theme,
+          locale: props.locale,
+          paymentMethods: props.paymentMethods,
+          defaultPaymentMethod: props.defaultPaymentMethod,
+          showPaymentButtons: props.showPaymentButtons,
+        });
+        sendConfig(iframe, state.pendingMap, {
           theme: props.theme,
           locale: props.locale,
           paymentMethods: props.paymentMethods,
@@ -114,18 +153,36 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
         (val) => {
           state.isReady = val;
           if (val) {
+            log("iframe Ready — sending config");
             sendConfigToIframe();
           }
         },
         (val) => {
           state.error = val;
+          log("iframe Error:", val);
         },
-        props.onReady,
-        props.onError,
-        (data) => props.onPaymentComplete?.(data as PaymentResult),
-        (data) => props.onPaymentFailed?.(data as PaymentResult),
-        (data) => props.onPaymentPending?.(data as PaymentResult),
+        () => {
+          log("onReady fired");
+          props.onReady?.();
+        },
+        (err) => {
+          log("onError fired:", err);
+          props.onError?.(err);
+        },
+        (data) => {
+          log("PaymentComplete:", data);
+          props.onPaymentComplete?.(data as PaymentResult);
+        },
+        (data) => {
+          log("PaymentFailed:", data);
+          props.onPaymentFailed?.(data as PaymentResult);
+        },
+        (data) => {
+          log("PaymentPending:", data);
+          props.onPaymentPending?.(data as PaymentResult);
+        },
         (method) => {
+          log("PaymentMethodSelected:", method);
           state.selectedPaymentMethod = method;
           if (window.PayConductor) {
             window.PayConductor.selectedPaymentMethod = method;
@@ -135,6 +192,7 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       );
     };
     window.addEventListener("message", eventHandler);
+    log("SDK initialized — waiting for PayConductorCheckoutElement");
   });
 
   return (
@@ -142,24 +200,10 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       class="payconductor"
       id="payconductor"
       style={{
-        width: "100%",
-        position: "relative",
+        display: "contents",
       }}
     >
       <Slot></Slot>
-      {state.isLoaded ? (
-        <iframe
-          allow="payment"
-          title="PayConductor"
-          ref={iframeRef}
-          src={state.iframeUrl}
-          style={{
-            width: "100%",
-            height: props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
-            border: "none",
-          }}
-        ></iframe>
-      ) : null}
     </div>
   );
 });

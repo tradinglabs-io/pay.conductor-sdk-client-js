@@ -1,6 +1,6 @@
 import { POST_MESSAGES } from "../constants";
 import type { BillingDetails, PayConductorConfig, PaymentMethod, PaymentResult } from "../iframe/types";
-import { confirmPayment, createPendingRequestsMap, sendMessageToIframe } from "../internal";
+import { confirmPayment, createPendingRequestsMap, sendInit, sendMessageToIframe } from "../internal";
 export type SubmitResult = {
   error?: {
     message: string;
@@ -17,7 +17,8 @@ export type UpdateOptions = {
   billingDetails?: Partial<BillingDetails>;
   address?: Partial<BillingDetails["address"]>;
 };
-export interface UseElementReturn {
+export interface UsePayconductorElementReturn {
+  init: (config: PayConductorConfig) => Promise<void>;
   confirmPayment: (options: ConfirmPaymentOptions) => Promise<PaymentResult>;
   validate: (data: unknown) => Promise<boolean>;
   reset: () => Promise<void>;
@@ -41,7 +42,7 @@ function getIframeFromContext(ctx: typeof window.PayConductor): HTMLIFrameElemen
   }
   return null;
 }
-export function useElement(): UseElementReturn {
+export function usePayconductorElement(): UsePayconductorElementReturn {
   const ctx = typeof window !== "undefined" ? window.PayConductor : null;
   const sendToIframe = (type: string, data?: unknown) => {
     if (!ctx) return;
@@ -55,6 +56,9 @@ export function useElement(): UseElementReturn {
   };
   if (!ctx) {
     return {
+      init: async () => {
+        throw new Error("PayConductor not initialized");
+      },
       confirmPayment: async () => {
         throw new Error("PayConductor not initialized");
       },
@@ -80,6 +84,11 @@ export function useElement(): UseElementReturn {
     };
   }
   return {
+    init: async (config: PayConductorConfig): Promise<void> => {
+      const iframe = getIframeFromContext(ctx);
+      const pendingMap = createPendingRequestsMap();
+      return sendInit(iframe || undefined, pendingMap, config);
+    },
     confirmPayment: async (options: ConfirmPaymentOptions): Promise<PaymentResult> => {
       const iframe = getIframeFromContext(ctx);
       const pendingMap = createPendingRequestsMap();

@@ -1,6 +1,6 @@
 {
   "name": "@payconductor-sdk-web/library-rsc",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "React Server Components SDK for PayConductor (Next.js)",
   "type": "module",
   "main": "dist/index.cjs.js",

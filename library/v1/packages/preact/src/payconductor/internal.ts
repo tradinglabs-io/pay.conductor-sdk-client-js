@@ -48,8 +48,11 @@ export function validatePayment(iframe: HTMLIFrameElement | Element | undefined,
 export function resetPayment(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null): Promise<void> {
   return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.RESET) as Promise<void>;
 }
-export function sendConfig(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, config: Pick<PayConductorConfig, "intentToken" | "theme" | "locale" | "paymentMethods" | "defaultPaymentMethod" | "showPaymentButtons" | "nuPayConfig">): Promise<void> {
+export function sendConfig(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, config: Pick<PayConductorConfig, "theme" | "locale" | "paymentMethods" | "defaultPaymentMethod" | "showPaymentButtons" | "nuPayConfig">): Promise<void> {
   return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.CONFIG, config) as Promise<void>;
+}
+export function sendInit(iframe: HTMLIFrameElement | Element | undefined, pendingMap: Map<string, PendingRequest> | null, config: PayConductorConfig): Promise<void> {
+  return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.INIT, config) as Promise<void>;
 }
 type MessagePayload = {
   requestId?: string;
@@ -79,7 +82,7 @@ export function handleMessageEvent(event: MessageEvent, pendingMap: Map<string, 
     } = pendingMap.get(requestId)!;
     pendingMap.delete(requestId);
     if (error) {
-      reject(new Error(error.message));
+      reject(new Error(String(error.message)));
     } else {
       resolve(data);
     }
@@ -92,7 +95,7 @@ export function handleMessageEvent(event: MessageEvent, pendingMap: Map<string, 
   }
   if (type === POST_MESSAGES.ERROR) {
     setError(error?.message || "Unknown error");
-    onError?.(new Error(error?.message));
+    onError?.(new Error(String(error?.message)));
     return;
   }
   if (type === POST_MESSAGES.PAYMENT_COMPLETE) {
