@@ -126,7 +126,7 @@ export function handleMessageEvent(
 		pendingMap.delete(requestId);
 
 		if (error) {
-			reject(new Error(error.message));
+			reject(new Error(String(error.message)));
 		} else {
 			resolve(data);
 		}
@@ -141,7 +141,7 @@ export function handleMessageEvent(
 
 	if (type === POST_MESSAGES.ERROR) {
 		setError(error?.message || "Unknown error");
-		onError?.(new Error(error?.message));
+		onError?.(new Error(String(error?.message)));
 		return;
 	}
 
