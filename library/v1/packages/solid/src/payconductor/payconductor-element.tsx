@@ -11,7 +11,7 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
 
   const [isLoaded, setIsLoaded] = createSignal(false);
 
-  let iframeRef: HTMLIFrameElement | Element | unknown | null;
+  let iframeRef: any;
 
   onMount(() => {
     const ctx = typeof window !== "undefined" ? window.PayConductor : null;
