@@ -1,21 +1,51 @@
 {
   "name": "@payconductor-sdk-web/library-rsc",
+  "version": "1.0.0",
+  "description": "React Server Components SDK for PayConductor (Next.js)",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
-    "package",
-    "src"
+    "dist"
   ],
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
-  "svelte": "./src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/payconductor-ai/payconductor-sdk-web"
+  },
+  "bugs": {
+    "url": "https://github.com/payconductor-ai/payconductor-sdk-web/issues"
+  },
+  "homepage": "https://github.com/payconductor-ai/payconductor-sdk-web#readme",
+  "license": "MIT",
+  "author": "PayConductor",
+  "keywords": [
+    "payconductor",
+    "payment",
+    "gateway",
+    "react",
+    "nextjs",
+    "rsc",
+    "server-components",
+    "sdk",
+    "checkout"
+  ],
   "exports": {
-    "./src": {
-      "import": "./src/index.ts",
-      "require": "./src/index.ts"
-    },
     ".": {
-      "import": "./src/index.ts",
-      "require": "./src/index.ts"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "typescript": "^5.0.0"
   }
 }

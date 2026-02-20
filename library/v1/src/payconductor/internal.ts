@@ -84,6 +84,7 @@ export function sendConfig(
 		| "paymentMethods"
 		| "defaultPaymentMethod"
 		| "showPaymentButtons"
+		| "nuPayConfig"
 	>,
 ): Promise<void> {
 	return sendMessageToIframe(
