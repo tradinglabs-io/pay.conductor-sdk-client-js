@@ -1,6 +1,6 @@
 {
   "name": "@payconductor-sdk-web/mono-repo",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "sync": "bun scripts/sdk.ts"
   },
