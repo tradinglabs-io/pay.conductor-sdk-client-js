@@ -1,5 +1,5 @@
 import { ALLOWED_ORIGINS, POST_MESSAGES, REQUEST_TIMEOUT } from "./constants";
-import type { PayConductorConfig, PaymentMethod, PaymentResult } from "./iframe/types";
+import {IncomingMessage, OutgoingMessage, PayConductorConfig, PaymentMethod, PaymentResult} from "./iframe/types";
 import type { ConfirmPaymentOptions, PendingRequest } from "./types";
 import { generateRequestId, isValidOrigin } from "./utils";
 
@@ -10,7 +10,7 @@ export function createPendingRequestsMap(): Map<string, PendingRequest> {
 export function sendMessageToIframe(
 	iframe: HTMLIFrameElement | Element | undefined,
 	pendingMap: Map<string, PendingRequest> | null,
-	type: keyof typeof POST_MESSAGES,
+	type: OutgoingMessage | IncomingMessage,
 	data?: unknown,
 ): Promise<unknown> {
 	return new Promise((resolve, reject) => {
