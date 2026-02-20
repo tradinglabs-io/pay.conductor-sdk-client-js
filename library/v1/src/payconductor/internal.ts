@@ -1,4 +1,4 @@
-import { ALLOWED_ORIGINS, MESSAGE_TYPES, REQUEST_TIMEOUT } from "./constants";
+import { ALLOWED_ORIGINS, POST_MESSAGES, REQUEST_TIMEOUT } from "./constants";
 import type { PayConductorConfig, PaymentMethod, PaymentResult } from "./iframe/types";
 import type { ConfirmPaymentOptions, PendingRequest } from "./types";
 import { generateRequestId, isValidOrigin } from "./utils";
@@ -10,7 +10,7 @@ export function createPendingRequestsMap(): Map<string, PendingRequest> {
 export function sendMessageToIframe(
 	iframe: HTMLIFrameElement | Element | undefined,
 	pendingMap: Map<string, PendingRequest> | null,
-	type: keyof typeof MESSAGE_TYPES,
+	type: keyof typeof POST_MESSAGES,
 	data?: unknown,
 ): Promise<unknown> {
 	return new Promise((resolve, reject) => {
@@ -48,7 +48,7 @@ export function confirmPayment(
 	pendingMap: Map<string, PendingRequest> | null,
 	options: ConfirmPaymentOptions,
 ): Promise<PaymentResult> {
-	return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.CONFIRM_PAYMENT, {
+	return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.CONFIRM_PAYMENT, {
 		intentToken: options.intentToken,
 	}) as Promise<PaymentResult>;
 }
@@ -61,7 +61,7 @@ export function validatePayment(
 	return sendMessageToIframe(
 		iframe,
 		pendingMap,
-		MESSAGE_TYPES.VALIDATE,
+		POST_MESSAGES.VALIDATE,
 		data,
 	) as Promise<boolean>;
 }
@@ -70,7 +70,7 @@ export function resetPayment(
 	iframe: HTMLIFrameElement | Element | undefined,
 	pendingMap: Map<string, PendingRequest> | null,
 ): Promise<void> {
-	return sendMessageToIframe(iframe, pendingMap, MESSAGE_TYPES.RESET) as Promise<void>;
+	return sendMessageToIframe(iframe, pendingMap, POST_MESSAGES.RESET) as Promise<void>;
 }
 
 export function sendConfig(
@@ -89,7 +89,7 @@ export function sendConfig(
 	return sendMessageToIframe(
 		iframe,
 		pendingMap,
-		MESSAGE_TYPES.CONFIG,
+		POST_MESSAGES.CONFIG,
 		config,
 	) as Promise<void>;
 }
@@ -132,40 +132,40 @@ export function handleMessageEvent(
 		return;
 	}
 
-	if (type === MESSAGE_TYPES.READY) {
+	if (type === POST_MESSAGES.READY) {
 		setIsReady(true);
 		onReady?.();
 		return;
 	}
 
-	if (type === MESSAGE_TYPES.ERROR) {
+	if (type === POST_MESSAGES.ERROR) {
 		setError(error?.message || "Unknown error");
 		onError?.(new Error(error?.message));
 		return;
 	}
 
-	if (type === MESSAGE_TYPES.PAYMENT_COMPLETE) {
+	if (type === POST_MESSAGES.PAYMENT_COMPLETE) {
 		if (data && typeof data === "object" && "status" in data) {
 			onPaymentComplete?.(data);
 		}
 		return;
 	}
 
-	if (type === MESSAGE_TYPES.PAYMENT_FAILED) {
+	if (type === POST_MESSAGES.PAYMENT_FAILED) {
 		if (data && typeof data === "object" && "status" in data) {
 			onPaymentFailed?.(data);
 		}
 		return;
 	}
 
-	if (type === MESSAGE_TYPES.PAYMENT_PENDING) {
+	if (type === POST_MESSAGES.PAYMENT_PENDING) {
 		if (data && typeof data === "object" && "status" in data) {
 			onPaymentPending?.(data);
 		}
 		return;
 	}
 
-	if (type === MESSAGE_TYPES.PAYMENT_METHOD_SELECTED) {
+	if (type === POST_MESSAGES.PAYMENT_METHOD_SELECTED) {
 		if (data && typeof data === "object" && "paymentMethod" in data) {
 			onPaymentMethodSelected?.(data.paymentMethod);
 		}
