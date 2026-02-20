@@ -89,7 +89,7 @@
     },
     "library/v1/packages/react": {
       "name": "@payconductor-sdk-web/library-react",
-      "version": "1.0.1",
+      "version": "1.0.3",
       "devDependencies": {
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",
@@ -106,7 +106,7 @@
     },
     "library/v1/packages/rsc": {
       "name": "@payconductor-sdk-web/library-rsc",
-      "version": "1.0.1",
+      "version": "1.0.4",
       "devDependencies": {
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",

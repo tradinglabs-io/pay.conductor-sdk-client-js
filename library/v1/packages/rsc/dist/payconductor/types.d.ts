@@ -21,6 +21,7 @@ export type PayConductorApi = {
 };
 export type PayConductorFrame = {
     iframe: HTMLIFrameElement | Element | unknown | null;
+    iframeUrl?: string;
     isReady: boolean;
     error: string | null;
 };
