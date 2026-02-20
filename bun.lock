@@ -70,7 +70,7 @@
     },
     "library/v1/packages/qwik": {
       "name": "@payconductor-sdk-web/library-qwik",
-      "version": "1.0.1",
+      "version": "1.0.5",
       "devDependencies": {
         "@builder.io/qwik": "1.2.18",
         "@types/eslint": "^8.44.4",
@@ -89,7 +89,7 @@
     },
     "library/v1/packages/react": {
       "name": "@payconductor-sdk-web/library-react",
-      "version": "1.0.3",
+      "version": "1.0.5",
       "devDependencies": {
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",
@@ -106,7 +106,7 @@
     },
     "library/v1/packages/rsc": {
       "name": "@payconductor-sdk-web/library-rsc",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "devDependencies": {
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",
