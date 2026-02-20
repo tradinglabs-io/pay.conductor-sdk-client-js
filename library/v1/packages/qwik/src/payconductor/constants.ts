@@ -5,7 +5,7 @@ export const IFRAME_BASE_URL = isDev ? IFRAME_BASE_URL_DEV : IFRAME_BASE_URL_PRO
 export const ALLOWED_ORIGINS = [IFRAME_BASE_URL_DEV, IFRAME_BASE_URL_PROD];
 export const IFRAME_DEFAULT_HEIGHT_VALUE = IFRAME_DEFAULT_HEIGHT;
 export const REQUEST_TIMEOUT = REQUEST_TIMEOUT_MS;
-export const MESSAGE_TYPES = {
+export const POST_MESSAGES = {
   INIT: OutgoingMessage.Init,
   CONFIG: OutgoingMessage.Config,
   UPDATE: OutgoingMessage.Update,
