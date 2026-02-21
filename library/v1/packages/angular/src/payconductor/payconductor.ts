@@ -80,9 +80,7 @@ export default class PayConductor {
   isReady: PayConductorState["isReady"] = false;
   error: PayConductorState["error"] = null;
   iframeUrl: PayConductorState["iframeUrl"] = "";
-  pendingMap: PayConductorState["pendingMap"] = null;
   selectedPaymentMethod: PayConductorState["selectedPaymentMethod"] = null;
-  configSent = false;
 
   ngOnInit() {
     if (typeof window !== "undefined") {
@@ -99,7 +97,9 @@ export default class PayConductor {
       });
       this.iframeUrl = iframeUrl;
       this.isLoaded = true;
-      this.pendingMap = createPendingRequestsMap();
+      const pendingMap: Map<string, PendingRequest> =
+        createPendingRequestsMap();
+      let configSent = false;
       log("iframeUrl built:", iframeUrl);
       log("pendingMap created");
       const getIframe = (): HTMLIFrameElement | undefined => {
@@ -121,12 +121,8 @@ export default class PayConductor {
       const frame: PayConductorFrame = {
         iframe: null,
         iframeUrl,
-        get isReady() {
-          return this.isReady;
-        },
-        get error() {
-          return this.error;
-        },
+        isReady: false,
+        error: null,
       };
       const config: PayConductorConfig = {
         publicKey: this.publicKey,
@@ -140,15 +136,15 @@ export default class PayConductor {
           log("confirmPayment called", {
             orderId: options.orderId,
           });
-          return confirmPayment(getIframe(), this.pendingMap, options);
+          return confirmPayment(getIframe(), pendingMap, options);
         },
         validate: (data: unknown) => {
           log("validate called", data);
-          return validatePayment(getIframe(), this.pendingMap, data);
+          return validatePayment(getIframe(), pendingMap, data);
         },
         reset: () => {
           log("reset called");
-          return resetPayment(getIframe(), this.pendingMap);
+          return resetPayment(getIframe(), pendingMap);
         },
         getSelectedPaymentMethod: () => this.selectedPaymentMethod,
       };
@@ -165,13 +161,13 @@ export default class PayConductor {
         })
       );
       const sendConfigToIframe = async () => {
-        if (!this.configSent) {
+        if (!configSent) {
           const iframe = getIframe();
           if (!iframe) {
             log("sendConfigToIframe: iframe not found, skipping");
             return;
           }
-          this.configSent = true;
+          configSent = true;
           log("sendConfig →", {
             theme: this.theme,
             locale: this.locale,
@@ -179,7 +175,7 @@ export default class PayConductor {
             defaultPaymentMethod: this.defaultPaymentMethod,
             showPaymentButtons: this.showPaymentButtons,
           });
-          sendConfig(iframe, this.pendingMap, {
+          sendConfig(iframe, pendingMap, {
             theme: this.theme,
             locale: this.locale,
             paymentMethods: this.paymentMethods,
@@ -192,9 +188,12 @@ export default class PayConductor {
       const eventHandler = (event: MessageEvent) => {
         handleMessageEvent(
           event,
-          this.pendingMap,
+          pendingMap,
           (val) => {
             this.isReady = val;
+            frame.isReady = val;
+            if (window.PayConductor && window.PayConductor.frame)
+              window.PayConductor.frame.isReady = val;
             if (val) {
               log("iframe Ready — sending config");
               sendConfigToIframe();
@@ -202,6 +201,9 @@ export default class PayConductor {
           },
           (val) => {
             this.error = val;
+            frame.error = val;
+            if (window.PayConductor && window.PayConductor.frame)
+              window.PayConductor.frame.error = val;
             log("iframe Error:", val);
           },
           () => {

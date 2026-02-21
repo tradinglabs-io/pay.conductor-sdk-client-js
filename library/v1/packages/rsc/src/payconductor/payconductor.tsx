@@ -51,15 +51,9 @@ function PayConductor(props: PayConductorEmbedProps) {
     () => ""
   );
 
-  const [pendingMap, setPendingMap] = useState<PayConductorState["pendingMap"]>(
-    () => null
-  );
-
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     PayConductorState["selectedPaymentMethod"]
   >(() => null);
-
-  const [configSent, setConfigSent] = useState(() => false);
 
   useEffect(() => {
     const log = (...args: any[]) => {
@@ -75,7 +69,8 @@ function PayConductor(props: PayConductorEmbedProps) {
     });
     setIframeUrl(iframeUrl);
     setIsLoaded(true);
-    setPendingMap(createPendingRequestsMap());
+    const pendingMap: Map<string, PendingRequest> = createPendingRequestsMap();
+    let configSent = false;
     log("iframeUrl built:", iframeUrl);
     log("pendingMap created");
     const getIframe = (): HTMLIFrameElement | undefined => {
@@ -97,12 +92,8 @@ function PayConductor(props: PayConductorEmbedProps) {
     const frame: PayConductorFrame = {
       iframe: null,
       iframeUrl,
-      get isReady() {
-        return isReady;
-      },
-      get error() {
-        return error;
-      },
+      isReady: false,
+      error: null,
     };
     const config: PayConductorConfig = {
       publicKey: props.publicKey,
@@ -147,7 +138,7 @@ function PayConductor(props: PayConductorEmbedProps) {
           log("sendConfigToIframe: iframe not found, skipping");
           return;
         }
-        setConfigSent(true);
+        configSent = true;
         log("sendConfig →", {
           theme: props.theme,
           locale: props.locale,
@@ -171,6 +162,9 @@ function PayConductor(props: PayConductorEmbedProps) {
         pendingMap,
         (val) => {
           setIsReady(val);
+          frame.isReady = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.isReady = val;
           if (val) {
             log("iframe Ready — sending config");
             sendConfigToIframe();
@@ -178,6 +172,9 @@ function PayConductor(props: PayConductorEmbedProps) {
         },
         (val) => {
           setError(val);
+          frame.error = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.error = val;
           log("iframe Error:", val);
         },
         () => {

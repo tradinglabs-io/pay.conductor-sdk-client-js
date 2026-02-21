@@ -43,11 +43,7 @@ function PayConductor(props: PayConductorEmbedProps) {
 
   const [iframeUrl, setIframeUrl] = createSignal("");
 
-  const [pendingMap, setPendingMap] = createSignal(null);
-
   const [selectedPaymentMethod, setSelectedPaymentMethod] = createSignal(null);
-
-  const [configSent, setConfigSent] = createSignal(false);
 
   onMount(() => {
     const log = (...args: any[]) => {
@@ -63,7 +59,8 @@ function PayConductor(props: PayConductorEmbedProps) {
     });
     setIframeUrl(iframeUrl);
     setIsLoaded(true);
-    setPendingMap(createPendingRequestsMap());
+    const pendingMap: Map<string, PendingRequest> = createPendingRequestsMap();
+    let configSent = false;
     log("iframeUrl built:", iframeUrl);
     log("pendingMap created");
     const getIframe = (): HTMLIFrameElement | undefined => {
@@ -85,12 +82,8 @@ function PayConductor(props: PayConductorEmbedProps) {
     const frame: PayConductorFrame = {
       iframe: null,
       iframeUrl,
-      get isReady() {
-        return isReady();
-      },
-      get error() {
-        return error();
-      },
+      isReady: false,
+      error: null,
     };
     const config: PayConductorConfig = {
       publicKey: props.publicKey,
@@ -104,15 +97,15 @@ function PayConductor(props: PayConductorEmbedProps) {
         log("confirmPayment called", {
           orderId: options.orderId,
         });
-        return confirmPayment(getIframe(), pendingMap(), options);
+        return confirmPayment(getIframe(), pendingMap, options);
       },
       validate: (data: unknown) => {
         log("validate called", data);
-        return validatePayment(getIframe(), pendingMap(), data);
+        return validatePayment(getIframe(), pendingMap, data);
       },
       reset: () => {
         log("reset called");
-        return resetPayment(getIframe(), pendingMap());
+        return resetPayment(getIframe(), pendingMap);
       },
       getSelectedPaymentMethod: () => selectedPaymentMethod(),
     };
@@ -129,13 +122,13 @@ function PayConductor(props: PayConductorEmbedProps) {
       })
     );
     const sendConfigToIframe = async () => {
-      if (!configSent()) {
+      if (!configSent) {
         const iframe = getIframe();
         if (!iframe) {
           log("sendConfigToIframe: iframe not found, skipping");
           return;
         }
-        setConfigSent(true);
+        configSent = true;
         log("sendConfig →", {
           theme: props.theme,
           locale: props.locale,
@@ -143,7 +136,7 @@ function PayConductor(props: PayConductorEmbedProps) {
           defaultPaymentMethod: props.defaultPaymentMethod,
           showPaymentButtons: props.showPaymentButtons,
         });
-        sendConfig(iframe, pendingMap(), {
+        sendConfig(iframe, pendingMap, {
           theme: props.theme,
           locale: props.locale,
           paymentMethods: props.paymentMethods,
@@ -156,9 +149,12 @@ function PayConductor(props: PayConductorEmbedProps) {
     const eventHandler = (event: MessageEvent) => {
       handleMessageEvent(
         event,
-        pendingMap(),
+        pendingMap,
         (val) => {
           setIsReady(val);
+          frame.isReady = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.isReady = val;
           if (val) {
             log("iframe Ready — sending config");
             sendConfigToIframe();
@@ -166,6 +162,9 @@ function PayConductor(props: PayConductorEmbedProps) {
         },
         (val) => {
           setError(val);
+          frame.error = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.error = val;
           log("iframe Error:", val);
         },
         () => {

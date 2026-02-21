@@ -74,9 +74,7 @@
   let isReady = false;
   let error = null;
   let iframeUrl = "";
-  let pendingMap = null;
   let selectedPaymentMethod = null;
-  let configSent = false;
 
   onMount(() => {
     const log = (...args: any[]) => {
@@ -92,7 +90,8 @@
     });
     iframeUrl = iframeUrl;
     isLoaded = true;
-    pendingMap = createPendingRequestsMap();
+    const pendingMap: Map<string, PendingRequest> = createPendingRequestsMap();
+    let configSent = false;
     log("iframeUrl built:", iframeUrl);
     log("pendingMap created");
     const getIframe = (): HTMLIFrameElement | undefined => {
@@ -114,12 +113,8 @@
     const frame: PayConductorFrame = {
       iframe: null,
       iframeUrl,
-      get isReady() {
-        return isReady;
-      },
-      get error() {
-        return error;
-      },
+      isReady: false,
+      error: null,
     };
     const config: PayConductorConfig = {
       publicKey: publicKey,
@@ -188,6 +183,9 @@
         pendingMap,
         (val) => {
           isReady = val;
+          frame.isReady = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.isReady = val;
           if (val) {
             log("iframe Ready — sending config");
             sendConfigToIframe();
@@ -195,6 +193,9 @@
         },
         (val) => {
           error = val;
+          frame.error = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.error = val;
           log("iframe Error:", val);
         },
         () => {

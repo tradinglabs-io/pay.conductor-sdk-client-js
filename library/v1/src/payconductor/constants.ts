@@ -9,7 +9,7 @@ import { IncomingMessage, OutgoingMessage } from "./iframe/types";
 const isDev =
 	typeof window !== "undefined" &&
 	(window.location.hostname === "localhost" ||
-		window.location.hostname === "127.0.0.1");
+		window.location.hostname === "127.0.0.1") && !window.location.search.includes("production");
 
 export const IFRAME_BASE_URL = isDev ? IFRAME_BASE_URL_DEV : IFRAME_BASE_URL_PROD;
 

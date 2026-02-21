@@ -52,9 +52,7 @@ class PayConductor extends HTMLElement {
       isReady: false,
       error: null,
       iframeUrl: "",
-      pendingMap: null,
       selectedPaymentMethod: null,
-      configSent: false,
     };
     if (!this.props) {
       this.props = {};
@@ -137,8 +135,8 @@ class PayConductor extends HTMLElement {
     this.update();
     this.state.isLoaded = true;
     this.update();
-    this.state.pendingMap = createPendingRequestsMap();
-    this.update();
+    const pendingMap: Map<string, PendingRequest> = createPendingRequestsMap();
+    let configSent = false;
     log("iframeUrl built:", iframeUrl);
     log("pendingMap created");
     const getIframe = (): HTMLIFrameElement | undefined => {
@@ -160,12 +158,8 @@ class PayConductor extends HTMLElement {
     const frame: PayConductorFrame = {
       iframe: null,
       iframeUrl,
-      get isReady() {
-        return this.state.isReady;
-      },
-      get error() {
-        return this.state.error;
-      },
+      isReady: false,
+      error: null,
     };
     const config: PayConductorConfig = {
       publicKey: this.props.publicKey,
@@ -179,15 +173,15 @@ class PayConductor extends HTMLElement {
         log("confirmPayment called", {
           orderId: options.orderId,
         });
-        return confirmPayment(getIframe(), this.state.pendingMap, options);
+        return confirmPayment(getIframe(), pendingMap, options);
       },
       validate: (data: unknown) => {
         log("validate called", data);
-        return validatePayment(getIframe(), this.state.pendingMap, data);
+        return validatePayment(getIframe(), pendingMap, data);
       },
       reset: () => {
         log("reset called");
-        return resetPayment(getIframe(), this.state.pendingMap);
+        return resetPayment(getIframe(), pendingMap);
       },
       getSelectedPaymentMethod: () => this.state.selectedPaymentMethod,
     };
@@ -204,14 +198,13 @@ class PayConductor extends HTMLElement {
       })
     );
     const sendConfigToIframe = async () => {
-      if (!this.state.configSent) {
+      if (!configSent) {
         const iframe = getIframe();
         if (!iframe) {
           log("sendConfigToIframe: iframe not found, skipping");
           return;
         }
-        this.state.configSent = true;
-        this.update();
+        configSent = true;
         log("sendConfig →", {
           theme: this.props.theme,
           locale: this.props.locale,
@@ -219,7 +212,7 @@ class PayConductor extends HTMLElement {
           defaultPaymentMethod: this.props.defaultPaymentMethod,
           showPaymentButtons: this.props.showPaymentButtons,
         });
-        sendConfig(iframe, this.state.pendingMap, {
+        sendConfig(iframe, pendingMap, {
           theme: this.props.theme,
           locale: this.props.locale,
           paymentMethods: this.props.paymentMethods,
@@ -232,10 +225,13 @@ class PayConductor extends HTMLElement {
     const eventHandler = (event: MessageEvent) => {
       handleMessageEvent(
         event,
-        this.state.pendingMap,
+        pendingMap,
         (val) => {
           this.state.isReady = val;
           this.update();
+          frame.isReady = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.isReady = val;
           if (val) {
             log("iframe Ready — sending config");
             sendConfigToIframe();
@@ -244,6 +240,9 @@ class PayConductor extends HTMLElement {
         (val) => {
           this.state.error = val;
           this.update();
+          frame.error = val;
+          if (window.PayConductor && window.PayConductor.frame)
+            window.PayConductor.frame.error = val;
           log("iframe Error:", val);
         },
         () => {
