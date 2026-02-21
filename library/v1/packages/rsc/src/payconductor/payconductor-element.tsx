@@ -15,21 +15,26 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
   const [isLoaded, setIsLoaded] = useState(() => false);
 
   useEffect(() => {
-    const ctx = typeof window !== "undefined" ? window.PayConductor : null;
-    if (!ctx) {
-      console.warn(
-        "[PayConductorCheckoutElement] window.PayConductor not found — ensure <PayConductor> is mounted before <PayConductorCheckoutElement>"
-      );
-    }
-    if (ctx?.frame) {
+    const init = (ctx: typeof window.PayConductor) => {
+      if (!ctx?.frame) return;
       setIframeUrl(ctx.frame.iframeUrl || "");
       ctx.frame.iframe = iframeRef.current;
       console.log(
         "[PayConductorCheckoutElement] iframe registered, src:",
         iframeUrl
       );
+      setIsLoaded(true);
+    };
+    const ctx = typeof window !== "undefined" ? window.PayConductor : null;
+    if (ctx) {
+      init(ctx);
+    } else {
+      const handler = (e: Event) => {
+        init((e as CustomEvent).detail);
+        window.removeEventListener("payconductor:registered", handler);
+      };
+      window.addEventListener("payconductor:registered", handler);
     }
-    setIsLoaded(true);
   }, []);
 
   return (

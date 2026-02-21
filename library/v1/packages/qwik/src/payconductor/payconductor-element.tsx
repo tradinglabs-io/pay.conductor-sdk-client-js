@@ -17,21 +17,26 @@ export const PayConductorCheckoutElement = component$(
     const iframeRef = useSignal<Element>();
     const state = useStore<any>({ iframeUrl: "", isLoaded: false });
     useVisibleTask$(() => {
-      const ctx = typeof window !== "undefined" ? window.PayConductor : null;
-      if (!ctx) {
-        console.warn(
-          "[PayConductorCheckoutElement] window.PayConductor not found — ensure <PayConductor> is mounted before <PayConductorCheckoutElement>"
-        );
-      }
-      if (ctx?.frame) {
+      const init = (ctx: typeof window.PayConductor) => {
+        if (!ctx?.frame) return;
         state.iframeUrl = ctx.frame.iframeUrl || "";
         ctx.frame.iframe = iframeRef.value;
         console.log(
           "[PayConductorCheckoutElement] iframe registered, src:",
           state.iframeUrl
         );
+        state.isLoaded = true;
+      };
+      const ctx = typeof window !== "undefined" ? window.PayConductor : null;
+      if (ctx) {
+        init(ctx);
+      } else {
+        const handler = (e: Event) => {
+          init((e as CustomEvent).detail);
+          window.removeEventListener("payconductor:registered", handler);
+        };
+        window.addEventListener("payconductor:registered", handler);
       }
-      state.isLoaded = true;
     });
 
     return (

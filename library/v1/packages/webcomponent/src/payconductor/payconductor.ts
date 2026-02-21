@@ -192,6 +192,11 @@ class PayConductor extends HTMLElement {
       selectedPaymentMethod: this.state.selectedPaymentMethod,
     };
     log("window.PayConductor registered");
+    window.dispatchEvent(
+      new CustomEvent("payconductor:registered", {
+        detail: window.PayConductor,
+      })
+    );
     const sendConfigToIframe = async () => {
       if (!this.state.configSent) {
         const iframe = getIframe();

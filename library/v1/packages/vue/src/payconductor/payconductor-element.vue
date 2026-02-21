@@ -47,21 +47,26 @@ export default defineComponent({
   },
 
   mounted() {
-    const ctx = typeof window !== "undefined" ? window.PayConductor : null;
-    if (!ctx) {
-      console.warn(
-        "[PayConductorCheckoutElement] window.PayConductor not found — ensure <PayConductor> is mounted before <PayConductorCheckoutElement>"
-      );
-    }
-    if (ctx?.frame) {
+    const init = (ctx: typeof window.PayConductor) => {
+      if (!ctx?.frame) return;
       this.iframeUrl = ctx.frame.iframeUrl || "";
       ctx.frame.iframe = this.$refs.iframeRef;
       console.log(
         "[PayConductorCheckoutElement] iframe registered, src:",
         this.iframeUrl
       );
+      this.isLoaded = true;
+    };
+    const ctx = typeof window !== "undefined" ? window.PayConductor : null;
+    if (ctx) {
+      init(ctx);
+    } else {
+      const handler = (e: Event) => {
+        init((e as CustomEvent).detail);
+        window.removeEventListener("payconductor:registered", handler);
+      };
+      window.addEventListener("payconductor:registered", handler);
     }
-    this.isLoaded = true;
   },
 });
 </script>

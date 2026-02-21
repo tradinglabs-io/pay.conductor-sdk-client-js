@@ -121,6 +121,11 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       selectedPaymentMethod: state.selectedPaymentMethod,
     };
     log("window.PayConductor registered");
+    window.dispatchEvent(
+      new CustomEvent("payconductor:registered", {
+        detail: window.PayConductor,
+      })
+    );
     const sendConfigToIframe = async () => {
       if (!state.configSent) {
         const iframe = getIframe();

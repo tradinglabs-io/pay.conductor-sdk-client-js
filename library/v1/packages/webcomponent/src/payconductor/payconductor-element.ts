@@ -106,13 +106,8 @@ class PayConductorCheckoutElement extends HTMLElement {
 
   onMount() {
     // onMount
-    const ctx = typeof window !== "undefined" ? window.PayConductor : null;
-    if (!ctx) {
-      console.warn(
-        "[PayConductorCheckoutElement] window.PayConductor not found — ensure <PayConductor> is mounted before <PayConductorCheckoutElement>"
-      );
-    }
-    if (ctx?.frame) {
+    const init = (ctx: typeof window.PayConductor) => {
+      if (!ctx?.frame) return;
       this.state.iframeUrl = ctx.frame.iframeUrl || "";
       this.update();
       ctx.frame.iframe = self._iframeRef;
@@ -120,9 +115,19 @@ class PayConductorCheckoutElement extends HTMLElement {
         "[PayConductorCheckoutElement] iframe registered, src:",
         this.state.iframeUrl
       );
+      this.state.isLoaded = true;
+      this.update();
+    };
+    const ctx = typeof window !== "undefined" ? window.PayConductor : null;
+    if (ctx) {
+      init(ctx);
+    } else {
+      const handler = (e: Event) => {
+        init((e as CustomEvent).detail);
+        window.removeEventListener("payconductor:registered", handler);
+      };
+      window.addEventListener("payconductor:registered", handler);
     }
-    this.state.isLoaded = true;
-    this.update();
   }
 
   onUpdate() {}

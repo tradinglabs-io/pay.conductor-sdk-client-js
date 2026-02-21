@@ -153,6 +153,11 @@ export default class PayConductor {
         selectedPaymentMethod: this.selectedPaymentMethod,
       };
       log("window.PayConductor registered");
+      window.dispatchEvent(
+        new CustomEvent("payconductor:registered", {
+          detail: window.PayConductor,
+        })
+      );
       const sendConfigToIframe = async () => {
         if (!this.configSent) {
           const iframe = getIframe();
