@@ -18,8 +18,7 @@ import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
           width: "100%"
         }'
     >
-      <ng-container
-        *ngIf='isLoaded && iframeUrl && this.iframeRef?.nativeElement && "contentWindow" in this.iframeRef?.nativeElement'
+      <ng-container *ngIf="isLoaded && iframeUrl"
         ><iframe
           allow="payment"
           title="PayConductor"

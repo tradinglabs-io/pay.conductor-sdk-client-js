@@ -56,7 +56,7 @@
   })}
   class="payconductor-element"
 >
-  {#if isLoaded && iframeUrl && iframeRef && "contentWindow" in iframeRef}
+  {#if isLoaded && iframeUrl}
     <iframe
       style={stringifyStyles({
         width: "100%",

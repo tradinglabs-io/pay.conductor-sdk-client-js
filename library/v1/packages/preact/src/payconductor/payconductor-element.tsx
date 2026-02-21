@@ -44,10 +44,7 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
         width: "100%",
       }}
     >
-      {isLoaded &&
-      iframeUrl &&
-      iframeRef.current &&
-      "contentWindow" in iframeRef.current ? (
+      {isLoaded && iframeUrl ? (
         <iframe
           allow="payment"
           title="PayConductor"

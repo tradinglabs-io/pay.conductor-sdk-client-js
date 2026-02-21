@@ -68,13 +68,19 @@ function PayConductor(props: PayConductorEmbedProps) {
     log("pendingMap created");
     const getIframe = (): HTMLIFrameElement | undefined => {
       const ref = window.PayConductor?.frame?.iframe;
-      if (!ref) return undefined;
-      if (ref instanceof HTMLIFrameElement) return ref;
-      if (typeof ref === "object" && ref !== null) {
-        if ("current" in ref) return (ref as any).current ?? undefined;
-        if ("value" in ref) return (ref as any).value ?? undefined;
+      if (ref) {
+        if (ref instanceof HTMLIFrameElement) return ref;
+        if (typeof ref === "object" && ref !== null) {
+          if ("current" in ref) return (ref as any).current ?? undefined;
+          if ("value" in ref) return (ref as any).value ?? undefined;
+        }
+        return ref as HTMLIFrameElement;
       }
-      return ref as HTMLIFrameElement;
+      return (
+        (document.querySelector(
+          ".payconductor-element iframe"
+        ) as HTMLIFrameElement) ?? undefined
+      );
     };
     const frame: PayConductorFrame = {
       iframe: null,

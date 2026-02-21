@@ -5,14 +5,7 @@
       width: '100%',
     }"
   >
-    <template
-      v-if="
-        isLoaded &&
-        iframeUrl &&
-        this.$refs.iframeRef &&
-        'contentWindow' in this.$refs.iframeRef
-      "
-    >
+    <template v-if="isLoaded && iframeUrl">
       <iframe
         allow="payment"
         title="PayConductor"
