@@ -44,7 +44,6 @@ export type PayConductorState = {
 	isReady: boolean;
 	error: string | null;
 	iframeUrl: string;
-	pendingMap: Map<string, PendingRequest> | null;
 	selectedPaymentMethod: PaymentMethod | null;
 };
 

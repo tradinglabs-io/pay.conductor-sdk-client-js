@@ -1,4 +1,4 @@
-import { onMount, useState, useStore } from "@builder.io/mitosis";
+import { onMount, useStore } from "@builder.io/mitosis";
 import type { PayConductorConfig, PaymentMethod, PaymentResult } from "./iframe/types";
 import {
 	confirmPayment,
@@ -34,11 +34,8 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		isReady: false,
 		error: null as string | null,
 		iframeUrl: "",
-		pendingMap: null as Map<string, PendingRequest> | null,
 		selectedPaymentMethod: null as PaymentMethod | null,
 	});
-
-	const [configSent, setConfigSent] = useState(false);
 
 	onMount(() => {
 		const log = (...args: any[]) => {
@@ -54,7 +51,9 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		});
 		state.iframeUrl = iframeUrl;
 		state.isLoaded = true;
-		state.pendingMap = createPendingRequestsMap();
+
+		const pendingMap: Map<string, PendingRequest> = createPendingRequestsMap();
+		let configSent = false;
 
 		log("iframeUrl built:", iframeUrl);
 		log("pendingMap created");
@@ -75,12 +74,8 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		const frame: PayConductorFrame = {
 			iframe: null,
 			iframeUrl,
-			get isReady() {
-				return state.isReady;
-			},
-			get error() {
-				return state.error;
-			},
+			isReady: false,
+			error: null,
 		};
 
 		const config: PayConductorConfig = {
@@ -94,15 +89,15 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		const api: PayConductorApi = {
 			confirmPayment: (options: { orderId: string }) => {
 				log("confirmPayment called", { orderId: options.orderId });
-				return confirmPayment(getIframe(), state.pendingMap, options);
+				return confirmPayment(getIframe(), pendingMap, options);
 			},
 			validate: (data: unknown) => {
 				log("validate called", data);
-				return validatePayment(getIframe(), state.pendingMap, data);
+				return validatePayment(getIframe(), pendingMap, data);
 			},
 			reset: () => {
 				log("reset called");
-				return resetPayment(getIframe(), state.pendingMap);
+				return resetPayment(getIframe(), pendingMap);
 			},
 			getSelectedPaymentMethod: () => state.selectedPaymentMethod,
 		};
@@ -124,7 +119,7 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 					log("sendConfigToIframe: iframe not found, skipping");
 					return;
 				}
-				setConfigSent(true);
+				configSent = true;
 				log("sendConfig →", {
 					theme: props.theme,
 					locale: props.locale,
@@ -132,7 +127,7 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 					defaultPaymentMethod: props.defaultPaymentMethod,
 					showPaymentButtons: props.showPaymentButtons,
 				});
-				sendConfig(iframe, state.pendingMap, {
+				sendConfig(iframe, pendingMap, {
 					theme: props.theme,
 					locale: props.locale,
 					paymentMethods: props.paymentMethods,
@@ -146,9 +141,11 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		const eventHandler = (event: MessageEvent) => {
 			handleMessageEvent(
 				event,
-				state.pendingMap,
+				pendingMap,
 				(val) => {
 					state.isReady = val;
+					frame.isReady = val;
+					if (window.PayConductor && window.PayConductor.frame) window.PayConductor.frame.isReady = val;
 					if (val) {
 						log("iframe Ready — sending config");
 						sendConfigToIframe();
@@ -156,6 +153,8 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 				},
 				(val) => {
 					state.error = val;
+					frame.error = val;
+					if (window.PayConductor && window.PayConductor.frame) window.PayConductor.frame.error = val;
 					log("iframe Error:", val);
 				},
 				() => {
