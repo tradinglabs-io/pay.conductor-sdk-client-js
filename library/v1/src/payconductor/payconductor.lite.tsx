@@ -113,6 +113,7 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		};
 
 		log("window.PayConductor registered");
+		window.dispatchEvent(new CustomEvent("payconductor:registered", { detail: window.PayConductor }));
 
 		const sendConfigToIframe = async () => {
 			if (!configSent) {
