@@ -47,10 +47,7 @@ export default function PayConductorCheckoutElement(
         width: "100%",
       }}
     >
-      {state.isLoaded &&
-        state.iframeUrl &&
-        iframeRef &&
-        "contentWindow" in iframeRef && (
+      {state.isLoaded && state.iframeUrl && (
           <iframe
             allow="payment"
             ref={iframeRef}

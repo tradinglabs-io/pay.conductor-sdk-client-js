@@ -46,24 +46,28 @@ export interface UsePayconductorElementReturn {
 }
 
 function getIframeFromContext(ctx: typeof window.PayConductor): HTMLIFrameElement | null {
-	if (!ctx?.frame?.iframe) return null;
-	const iframeRef = ctx.frame.iframe;
-	if (iframeRef instanceof HTMLIFrameElement) {
-		return iframeRef;
-	}
-	if (iframeRef && typeof iframeRef === "object" && "value" in iframeRef) {
-		const value = iframeRef.value;
-		if (value instanceof HTMLIFrameElement) {
-			return value;
+	if (ctx?.frame?.iframe) {
+		const iframeRef = ctx.frame.iframe;
+		if (iframeRef instanceof HTMLIFrameElement) return iframeRef;
+		if (iframeRef && typeof iframeRef === "object") {
+			if ("current" in iframeRef) {
+				const el = (iframeRef as any).current;
+				if (el instanceof HTMLIFrameElement) return el;
+			}
+			if ("value" in iframeRef) {
+				const el = (iframeRef as any).value;
+				if (el instanceof HTMLIFrameElement) return el;
+			}
 		}
 	}
-	return null;
+	return (document.querySelector(".payconductor-element iframe") as HTMLIFrameElement) ?? null;
 }
 
 export function usePayconductorElement(): UsePayconductorElementReturn {
-	const ctx = typeof window !== "undefined" ? window.PayConductor : null;
+	const getCtx = () => (typeof window !== "undefined" ? window.PayConductor : null);
 
 	const sendToIframe = (type: string, data?: unknown) => {
+		const ctx = getCtx();
 		if (!ctx) return;
 		const iframe = getIframeFromContext(ctx);
 		if (iframe?.contentWindow) {
@@ -71,46 +75,16 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
 		}
 	};
 
-	if (!ctx) {
-		return {
-			init: async () => {
-				throw new Error("PayConductor not initialized");
-			},
-			confirmPayment: async () => {
-				throw new Error("PayConductor not initialized");
-			},
-			validate: async () => {
-				throw new Error("PayConductor not initialized");
-			},
-			reset: async () => {
-				throw new Error("PayConductor not initialized");
-			},
-			getSelectedPaymentMethod: () => null,
-			updateConfig: () => {
-				throw new Error("PayConductor not initialized");
-			},
-			updateorderId: () => {
-				throw new Error("PayConductor not initialized");
-			},
-			update: () => {
-				throw new Error("PayConductor not initialized");
-			},
-			submit: async () => {
-				throw new Error("PayConductor not initialized");
-			},
-		};
-	}
-
 	return {
 		init: async (config: PayConductorConfig): Promise<void> => {
-			const iframe = getIframeFromContext(ctx);
+			const iframe = getIframeFromContext(getCtx());
 			const pendingMap = createPendingRequestsMap();
 			return sendInit(iframe || undefined, pendingMap, config);
 		},
 		confirmPayment: async (
 			options: ConfirmPaymentOptions,
 		): Promise<PaymentResult> => {
-			const iframe = getIframeFromContext(ctx);
+			const iframe = getIframeFromContext(getCtx());
 			const pendingMap = createPendingRequestsMap();
 
 			if (!options.orderId) {
@@ -119,17 +93,25 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
 
 			return confirmPayment(iframe || undefined, pendingMap, options);
 		},
-		validate: ctx.api.validate,
-		reset: ctx.api.reset,
+		validate: (data: unknown) => {
+			const ctx = getCtx();
+			if (!ctx) return Promise.resolve(false);
+			return ctx.api.validate(data);
+		},
+		reset: () => {
+			const ctx = getCtx();
+			if (!ctx) return Promise.resolve();
+			return ctx.api.reset();
+		},
 		getSelectedPaymentMethod: (): PaymentMethod | null => {
-			return ctx?.selectedPaymentMethod ?? null;
+			return getCtx()?.selectedPaymentMethod ?? null;
 		},
 		updateConfig: (
 			config: Partial<
 				Pick<PayConductorConfig, "theme" | "locale" | "paymentMethods">
 			>,
 		) => {
-			const currentConfig = ctx.config;
+			const currentConfig = getCtx()?.config;
 			sendToIframe(POST_MESSAGES.CONFIG, {
 				publicKey: currentConfig?.publicKey,
 				orderId: currentConfig?.orderId,
@@ -139,7 +121,7 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
 			});
 		},
 		updateorderId: (orderId: string) => {
-			const currentConfig = ctx.config;
+			const currentConfig = getCtx()?.config;
 			sendToIframe(POST_MESSAGES.CONFIG, {
 				publicKey: currentConfig?.publicKey,
 				orderId: orderId,
@@ -152,7 +134,7 @@ export function usePayconductorElement(): UsePayconductorElementReturn {
 			sendToIframe(POST_MESSAGES.UPDATE, options);
 		},
 		submit: async (): Promise<SubmitResult> => {
-			const iframe = getIframeFromContext(ctx);
+			const iframe = getIframeFromContext(getCtx());
 			const pendingMap = createPendingRequestsMap();
 
 			try {
