@@ -32,6 +32,8 @@ class PayConductorCheckoutElement extends HTMLElement {
 
     this.componentProps = ["height"];
 
+    this.updateDeps = [[this.state.isLoaded, this.state.iframeUrl]];
+
     // used to keep track of all nodes created by show/for
     this.nodesToDestroy = [];
     // batch updates
@@ -110,7 +112,6 @@ class PayConductorCheckoutElement extends HTMLElement {
       if (!ctx?.frame) return;
       this.state.iframeUrl = ctx.frame.iframeUrl || "";
       this.update();
-      ctx.frame.iframe = self._iframeRef;
       this.state.isLoaded = true;
       this.update();
     };
@@ -126,7 +127,26 @@ class PayConductorCheckoutElement extends HTMLElement {
     }
   }
 
-  onUpdate() {}
+  onUpdate() {
+    const self = this;
+
+    (function (__prev, __next) {
+      const __hasChange = __prev.find((val, index) => val !== __next[index]);
+      if (__hasChange !== undefined) {
+        if (
+          self.state.isLoaded &&
+          self.state.iframeUrl &&
+          window.PayConductor?.frame
+        ) {
+          const el =
+            self._iframeRef ||
+            document.querySelector(".payconductor-element iframe");
+          if (el) window.PayConductor.frame.iframe = el;
+        }
+        self.updateDeps[0] = __next;
+      }
+    })(self.updateDeps[0], [self.state.isLoaded, self.state.iframeUrl]);
+  }
 
   update() {
     if (this.pendingUpdate === true) {

@@ -6,6 +6,7 @@ import {
   h,
   useSignal,
   useStore,
+  useTask$,
   useVisibleTask$,
 } from "@builder.io/qwik";
 
@@ -20,7 +21,6 @@ export const PayConductorCheckoutElement = component$(
       const init = (ctx: typeof window.PayConductor) => {
         if (!ctx?.frame) return;
         state.iframeUrl = ctx.frame.iframeUrl || "";
-        ctx.frame.iframe = iframeRef.value;
         state.isLoaded = true;
       };
       const ctx = typeof window !== "undefined" ? window.PayConductor : null;
@@ -32,6 +32,16 @@ export const PayConductorCheckoutElement = component$(
           window.removeEventListener("payconductor:registered", handler);
         };
         window.addEventListener("payconductor:registered", handler);
+      }
+    });
+    useTask$(({ track }) => {
+      track(() => state.isLoaded);
+      track(() => state.iframeUrl);
+      if (state.isLoaded && state.iframeUrl && window.PayConductor?.frame) {
+        const el =
+          iframeRef.value ||
+          document.querySelector(".payconductor-element iframe");
+        if (el) window.PayConductor.frame.iframe = el;
       }
     });
 

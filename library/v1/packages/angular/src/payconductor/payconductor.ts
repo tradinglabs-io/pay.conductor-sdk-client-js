@@ -149,6 +149,10 @@ export default class PayConductor {
         api,
         selectedPaymentMethod: this.selectedPaymentMethod,
       };
+      const existingIframe = document.querySelector(
+        ".payconductor-element iframe"
+      ) as HTMLIFrameElement;
+      if (existingIframe) frame.iframe = existingIframe;
       log("registered");
       window.dispatchEvent(
         new CustomEvent("payconductor:registered", {

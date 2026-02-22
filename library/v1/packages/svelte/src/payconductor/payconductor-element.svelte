@@ -30,7 +30,6 @@
     const init = (ctx: typeof window.PayConductor) => {
       if (!ctx?.frame) return;
       iframeUrl = ctx.frame.iframeUrl || "";
-      ctx.frame.iframe = iframeRef;
       isLoaded = true;
     };
     const ctx = typeof window !== "undefined" ? window.PayConductor : null;
@@ -44,6 +43,16 @@
       window.addEventListener("payconductor:registered", handler);
     }
   });
+
+  function onUpdateFn_0(..._args: any[]) {
+    if (isLoaded && iframeUrl && window.PayConductor?.frame) {
+      const el =
+        iframeRef || document.querySelector(".payconductor-element iframe");
+      if (el) window.PayConductor.frame.iframe = el;
+    }
+  }
+
+  $: onUpdateFn_0(...[isLoaded, iframeUrl]);
 </script>
 
 <div
