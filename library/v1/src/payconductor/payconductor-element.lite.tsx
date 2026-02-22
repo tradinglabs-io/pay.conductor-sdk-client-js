@@ -1,4 +1,4 @@
-import { onMount, useRef, useStore } from "@builder.io/mitosis";
+import { onMount, onUpdate, useRef, useStore } from "@builder.io/mitosis";
 import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
 
 export interface PayConductorCheckoutElementProps {
@@ -19,7 +19,6 @@ export default function PayConductorCheckoutElement(
     const init = (ctx: typeof window.PayConductor) => {
       if (!ctx?.frame) return;
       state.iframeUrl = ctx.frame.iframeUrl || "";
-      ctx.frame.iframe = iframeRef;
       state.isLoaded = true;
     };
 
@@ -36,26 +35,30 @@ export default function PayConductorCheckoutElement(
     }
   });
 
+  onUpdate(() => {
+    if (state.isLoaded && iframeRef && window.PayConductor?.frame) {
+      window.PayConductor.frame.iframe = iframeRef;
+    }
+  }, [state.isLoaded]);
+
   return (
     <div
       class="payconductor-element"
-      style={{
-        width: "100%",
-      }}
+      style={{ width: "100%" }}
     >
       {state.isLoaded && state.iframeUrl && (
-          <iframe
-            allow="payment"
-            ref={iframeRef}
-            src={state.iframeUrl}
-            style={{
-              width: "100%",
-              height: props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
-              border: "none",
-            }}
-            title="PayConductor"
-          />
-        )}
+        <iframe
+          allow="payment"
+          ref={iframeRef}
+          src={state.iframeUrl}
+          style={{
+            width: "100%",
+            height: props.height || IFRAME_DEFAULT_HEIGHT_VALUE,
+            border: "none",
+          }}
+          title="PayConductor"
+        />
+      )}
     </div>
   );
 }
