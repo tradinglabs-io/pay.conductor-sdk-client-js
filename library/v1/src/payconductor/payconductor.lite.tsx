@@ -66,7 +66,10 @@ export default function PayConductor(props: PayConductorEmbedProps) {
 		};
 
 		const frame: PayConductorFrame = {
-			iframe: null,
+			get iframe(): HTMLIFrameElement | null {
+				return (document.querySelector(".payconductor-element iframe") as HTMLIFrameElement) ?? null;
+			},
+			set iframe(_: HTMLIFrameElement | Element | unknown | null) {},
 			iframeUrl,
 			isReady: false,
 			error: null,

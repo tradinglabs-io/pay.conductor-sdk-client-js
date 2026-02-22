@@ -1,4 +1,4 @@
-import { onMount, onUpdate, useRef, useStore } from "@builder.io/mitosis";
+import { onMount, useRef, useStore } from "@builder.io/mitosis";
 import { IFRAME_DEFAULT_HEIGHT_VALUE } from "./constants";
 
 export interface PayConductorCheckoutElementProps {
@@ -34,12 +34,6 @@ export default function PayConductorCheckoutElement(
       window.addEventListener("payconductor:registered", handler);
     }
   });
-
-  onUpdate(() => {
-    if (state.isLoaded && iframeRef && window.PayConductor?.frame) {
-      window.PayConductor.frame.iframe = iframeRef;
-    }
-  }, [state.isLoaded]);
 
   return (
     <div
