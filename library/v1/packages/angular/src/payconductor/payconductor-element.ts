@@ -1,13 +1,7 @@
 import { NgModule } from "@angular/core";
 import { CommonModule } from "@angular/common";
 
-import {
-  Component,
-  ViewChild,
-  ElementRef,
-  Input,
-  SimpleChanges,
-} from "@angular/core";
+import { Component, ViewChild, ElementRef, Input } from "@angular/core";
 
 export interface PayConductorCheckoutElementProps {
   height?: string;
@@ -73,17 +67,6 @@ export default class PayConductorCheckoutElement {
           window.removeEventListener("payconductor:registered", handler);
         };
         window.addEventListener("payconductor:registered", handler);
-      }
-    }
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (typeof window !== "undefined") {
-      if (this.isLoaded && this.iframeUrl && window.PayConductor?.frame) {
-        const el =
-          this.iframeRef?.nativeElement ||
-          document.querySelector(".payconductor-element iframe");
-        if (el) window.PayConductor.frame.iframe = el;
       }
     }
   }

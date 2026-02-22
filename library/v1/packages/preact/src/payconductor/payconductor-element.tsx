@@ -31,14 +31,6 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
       window.addEventListener("payconductor:registered", handler);
     }
   }, []);
-  useEffect(() => {
-    if (isLoaded && iframeUrl && window.PayConductor?.frame) {
-      const el =
-        iframeRef.current ||
-        document.querySelector(".payconductor-element iframe");
-      if (el) window.PayConductor.frame.iframe = el;
-    }
-  }, [isLoaded, iframeUrl]);
 
   return (
     <div

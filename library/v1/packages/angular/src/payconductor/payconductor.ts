@@ -114,7 +114,14 @@ export default class PayConductor {
         );
       };
       const frame: PayConductorFrame = {
-        iframe: null,
+        get iframe(): HTMLIFrameElement | null {
+          return (
+            (document.querySelector(
+              ".payconductor-element iframe"
+            ) as HTMLIFrameElement) ?? null
+          );
+        },
+        set iframe(_: HTMLIFrameElement | Element | unknown | null) {},
         iframeUrl,
         isReady: false,
         error: null,
@@ -149,10 +156,6 @@ export default class PayConductor {
         api,
         selectedPaymentMethod: this.selectedPaymentMethod,
       };
-      const existingIframe = document.querySelector(
-        ".payconductor-element iframe"
-      ) as HTMLIFrameElement;
-      if (existingIframe) frame.iframe = existingIframe;
       log("registered");
       window.dispatchEvent(
         new CustomEvent("payconductor:registered", {

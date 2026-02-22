@@ -1,11 +1,4 @@
-import {
-  Show,
-  onMount,
-  on,
-  createEffect,
-  createMemo,
-  createSignal,
-} from "solid-js";
+import { Show, onMount, createSignal, createMemo } from "solid-js";
 
 export interface PayConductorCheckoutElementProps {
   height?: string;
@@ -37,22 +30,6 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
       window.addEventListener("payconductor:registered", handler);
     }
   });
-
-  const onUpdateFn_0_isLoaded__ = createMemo(() => isLoaded());
-  const onUpdateFn_0_iframeUrl__ = createMemo(() => iframeUrl());
-  function onUpdateFn_0() {
-    if (isLoaded() && iframeUrl() && window.PayConductor?.frame) {
-      const el =
-        iframeRef || document.querySelector(".payconductor-element iframe");
-      if (el) window.PayConductor.frame.iframe = el;
-    }
-  }
-  createEffect(
-    on(
-      () => [onUpdateFn_0_isLoaded__(), onUpdateFn_0_iframeUrl__()],
-      onUpdateFn_0
-    )
-  );
 
   return (
     <>

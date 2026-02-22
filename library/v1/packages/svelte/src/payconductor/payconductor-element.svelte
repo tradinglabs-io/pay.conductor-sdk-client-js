@@ -43,16 +43,6 @@
       window.addEventListener("payconductor:registered", handler);
     }
   });
-
-  function onUpdateFn_0(..._args: any[]) {
-    if (isLoaded && iframeUrl && window.PayConductor?.frame) {
-      const el =
-        iframeRef || document.querySelector(".payconductor-element iframe");
-      if (el) window.PayConductor.frame.iframe = el;
-    }
-  }
-
-  $: onUpdateFn_0(...[isLoaded, iframeUrl]);
 </script>
 
 <div

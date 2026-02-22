@@ -56,28 +56,5 @@ export default defineComponent({
       window.addEventListener("payconductor:registered", handler);
     }
   },
-
-  watch: {
-    onUpdateHook0: {
-      handler() {
-        if (this.isLoaded && this.iframeUrl && window.PayConductor?.frame) {
-          const el =
-            this.$refs.iframeRef ||
-            document.querySelector(".payconductor-element iframe");
-          if (el) window.PayConductor.frame.iframe = el;
-        }
-      },
-      immediate: true,
-    },
-  },
-
-  computed: {
-    onUpdateHook0() {
-      return {
-        0: this.isLoaded,
-        1: this.iframeUrl,
-      };
-    },
-  },
 });
 </script>
