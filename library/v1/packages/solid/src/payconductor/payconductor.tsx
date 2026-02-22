@@ -191,6 +191,23 @@ function PayConductor(props: PayConductorEmbedProps) {
       );
     };
     window.addEventListener("message", eventHandler);
+    const setupIframeLoadListener = () => {
+      const el = getIframe();
+      if (!el) return false;
+      el.addEventListener("load", () => sendConfigToIframe(), {
+        once: true,
+      });
+      return true;
+    };
+    if (!setupIframeLoadListener()) {
+      const iframeObserver = new MutationObserver(() => {
+        if (setupIframeLoadListener()) iframeObserver.disconnect();
+      });
+      iframeObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+    }
   });
 
   return (
