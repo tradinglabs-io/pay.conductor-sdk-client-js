@@ -31,10 +31,6 @@
       if (!ctx?.frame) return;
       iframeUrl = ctx.frame.iframeUrl || "";
       ctx.frame.iframe = iframeRef;
-      console.log(
-        "[PayConductorCheckoutElement] iframe registered, src:",
-        iframeUrl
-      );
       isLoaded = true;
     };
     const ctx = typeof window !== "undefined" ? window.PayConductor : null;

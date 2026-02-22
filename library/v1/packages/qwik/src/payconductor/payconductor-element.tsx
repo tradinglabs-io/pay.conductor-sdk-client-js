@@ -21,10 +21,6 @@ export const PayConductorCheckoutElement = component$(
         if (!ctx?.frame) return;
         state.iframeUrl = ctx.frame.iframeUrl || "";
         ctx.frame.iframe = iframeRef.value;
-        console.log(
-          "[PayConductorCheckoutElement] iframe registered, src:",
-          state.iframeUrl
-        );
         state.isLoaded = true;
       };
       const ctx = typeof window !== "undefined" ? window.PayConductor : null;

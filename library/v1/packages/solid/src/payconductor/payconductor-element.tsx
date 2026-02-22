@@ -18,10 +18,6 @@ function PayConductorCheckoutElement(props: PayConductorCheckoutElementProps) {
       if (!ctx?.frame) return;
       setIframeUrl(ctx.frame.iframeUrl || "");
       ctx.frame.iframe = iframeRef;
-      console.log(
-        "[PayConductorCheckoutElement] iframe registered, src:",
-        iframeUrl()
-      );
       setIsLoaded(true);
     };
     const ctx = typeof window !== "undefined" ? window.PayConductor : null;

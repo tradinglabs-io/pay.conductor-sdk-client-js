@@ -57,10 +57,6 @@ export default class PayConductorCheckoutElement {
         if (!ctx?.frame) return;
         this.iframeUrl = ctx.frame.iframeUrl || "";
         ctx.frame.iframe = this.iframeRef?.nativeElement;
-        console.log(
-          "[PayConductorCheckoutElement] iframe registered, src:",
-          this.iframeUrl
-        );
         this.isLoaded = true;
       };
       const ctx = typeof window !== "undefined" ? window.PayConductor : null;

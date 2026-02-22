@@ -44,10 +44,6 @@ export default defineComponent({
       if (!ctx?.frame) return;
       this.iframeUrl = ctx.frame.iframeUrl || "";
       ctx.frame.iframe = this.$refs.iframeRef;
-      console.log(
-        "[PayConductorCheckoutElement] iframe registered, src:",
-        this.iframeUrl
-      );
       this.isLoaded = true;
     };
     const ctx = typeof window !== "undefined" ? window.PayConductor : null;

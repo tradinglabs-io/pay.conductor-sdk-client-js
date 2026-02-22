@@ -53,13 +53,8 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
   });
   useVisibleTask$(() => {
     const log = (...args: any[]) => {
-      if (props.debug) {
-        console.log("[PayConductor]", ...args);
-      }
+      if (props.debug) console.log("[PayConductor]", ...args);
     };
-    log("SDK initializing", {
-      publicKey: props.publicKey,
-    });
     const iframeUrl = buildIframeUrl({
       publicKey: props.publicKey,
     });
@@ -67,8 +62,8 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
     state.isLoaded = true;
     const pendingMap: Map<string, PendingRequest> = createPendingRequestsMap();
     let configSent = false;
-    log("iframeUrl built:", iframeUrl);
-    log("pendingMap created");
+    log("init", props.publicKey);
+    log("iframeUrl", iframeUrl);
     const getIframe = (): HTMLIFrameElement | undefined => {
       const ref = window.PayConductor?.frame?.iframe;
       if (ref) {
@@ -100,17 +95,17 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
     };
     const api: PayConductorApi = {
       confirmPayment: (options: { orderId: string }) => {
-        log("confirmPayment called", {
+        log("→ CONFIRM_PAYMENT", {
           orderId: options.orderId,
         });
         return confirmPayment(getIframe(), pendingMap, options);
       },
       validate: (data: unknown) => {
-        log("validate called", data);
+        log("→ VALIDATE", data);
         return validatePayment(getIframe(), pendingMap, data);
       },
       reset: () => {
-        log("reset called");
+        log("→ RESET");
         return resetPayment(getIframe(), pendingMap);
       },
       getSelectedPaymentMethod: () => state.selectedPaymentMethod,
@@ -121,7 +116,7 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       api,
       selectedPaymentMethod: state.selectedPaymentMethod,
     };
-    log("window.PayConductor registered");
+    log("registered");
     window.dispatchEvent(
       new CustomEvent("payconductor:registered", {
         detail: window.PayConductor,
@@ -131,11 +126,11 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       if (!configSent) {
         const iframe = getIframe();
         if (!iframe) {
-          log("sendConfigToIframe: iframe not found, skipping");
+          log("→ CONFIG skipped: iframe not found");
           return;
         }
         configSent = true;
-        log("sendConfig →", {
+        log("→ CONFIG", {
           theme: props.theme,
           locale: props.locale,
           paymentMethods: props.paymentMethods,
@@ -153,58 +148,48 @@ export const PayConductor = component$((props: PayConductorEmbedProps) => {
       }
     };
     const eventHandler = (event: MessageEvent) => {
+      if (event.data?.type) {
+        log("←", event.data.type, event.data.data ?? "");
+      }
       handleMessageEvent(
         event,
         pendingMap,
         (val) => {
           state.isReady = val;
           frame.isReady = val;
-          if (window.PayConductor && window.PayConductor.frame)
+          if (window.PayConductor?.frame)
             window.PayConductor.frame.isReady = val;
-          if (val) {
-            log("iframe Ready — sending config");
-            sendConfigToIframe();
-          }
+          if (val) sendConfigToIframe();
         },
         (val) => {
           state.error = val;
           frame.error = val;
-          if (window.PayConductor && window.PayConductor.frame)
-            window.PayConductor.frame.error = val;
-          log("iframe Error:", val);
+          if (window.PayConductor?.frame) window.PayConductor.frame.error = val;
         },
         () => {
-          log("onReady fired");
           props.onReady?.();
         },
         (err) => {
-          log("onError fired:", err);
           props.onError?.(err);
         },
         (data) => {
-          log("PaymentComplete:", data);
           props.onPaymentComplete?.(data as PaymentResult);
         },
         (data) => {
-          log("PaymentFailed:", data);
           props.onPaymentFailed?.(data as PaymentResult);
         },
         (data) => {
-          log("PaymentPending:", data);
           props.onPaymentPending?.(data as PaymentResult);
         },
         (method) => {
-          log("PaymentMethodSelected:", method);
           state.selectedPaymentMethod = method;
-          if (window.PayConductor) {
+          if (window.PayConductor)
             window.PayConductor.selectedPaymentMethod = method;
-          }
           props.onPaymentMethodSelected?.(method);
         }
       );
     };
     window.addEventListener("message", eventHandler);
-    log("SDK initialized — waiting for PayConductorCheckoutElement");
   });
 
   return (

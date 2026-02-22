@@ -10,5 +10,11 @@ export function generateRequestId(): string {
   return crypto.randomUUID();
 }
 export function isValidOrigin(origin: string, allowedOrigins: string[]): boolean {
-  return allowedOrigins.includes(origin);
+  return allowedOrigins.some(allowed => {
+    try {
+      return new URL(allowed).origin === origin;
+    } catch {
+      return allowed === origin;
+    }
+  });
 }

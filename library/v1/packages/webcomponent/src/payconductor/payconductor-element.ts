@@ -111,10 +111,6 @@ class PayConductorCheckoutElement extends HTMLElement {
       this.state.iframeUrl = ctx.frame.iframeUrl || "";
       this.update();
       ctx.frame.iframe = self._iframeRef;
-      console.log(
-        "[PayConductorCheckoutElement] iframe registered, src:",
-        this.state.iframeUrl
-      );
       this.state.isLoaded = true;
       this.update();
     };
