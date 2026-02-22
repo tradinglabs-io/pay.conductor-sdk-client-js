@@ -20,10 +20,6 @@ export default function PayConductorCheckoutElement(
       if (!ctx?.frame) return;
       state.iframeUrl = ctx.frame.iframeUrl || "";
       ctx.frame.iframe = iframeRef;
-      console.log(
-        "[PayConductorCheckoutElement] iframe registered, src:",
-        state.iframeUrl,
-      );
       state.isLoaded = true;
     };
 
